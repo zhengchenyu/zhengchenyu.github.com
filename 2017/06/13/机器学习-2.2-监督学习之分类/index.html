@@ -1,0 +1,830 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next muse use-motion" lang="">
+<head>
+  <!-- hexo-inject:begin --><!-- hexo-inject:end --><meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.1" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Hexo, NexT" />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.1" />
+
+
+
+
+
+
+<meta name="description" content="监督学习本章继续研究监督学习的问题。 ##1 回归问题 我们随机制造一个样本空间\({x 2} \geqslant 2{x 1} + 1\)，对于对空间进行分类。具体例子如下：  对于这些样本，假定可以通过二维线性曲线进行分类。然后模拟出某条曲线，使样本得到一个很好的分类。 这个分类问题的样本的y值只有0或1(0-1分布或伯努利分布)，即表示在直线上面或直线下面。如果用之前的线性回归结果将非常">
+<meta property="og:type" content="article">
+<meta property="og:title" content="机器学习 2.1 监督学习之线性回归">
+<meta property="og:url" content="http://yoursite.com/2017/06/13/机器学习-2.2-监督学习之分类/index.html">
+<meta property="og:site_name" content="Hexo">
+<meta property="og:description" content="监督学习本章继续研究监督学习的问题。 ##1 回归问题 我们随机制造一个样本空间\({x 2} \geqslant 2{x 1} + 1\)，对于对空间进行分类。具体例子如下：  对于这些样本，假定可以通过二维线性曲线进行分类。然后模拟出某条曲线，使样本得到一个很好的分类。 这个分类问题的样本的y值只有0或1(0-1分布或伯努利分布)，即表示在直线上面或直线下面。如果用之前的线性回归结果将非常">
+<meta property="og:image" content="http://yoursite.com/images/监督学习-分类问题样本.png">
+<meta property="og:image" content="http://yoursite.com/images/监督学习-分类问题辅助函数.png">
+<meta property="og:image" content="http://yoursite.com/images/监督学习-分类问题计算结果.png">
+<meta property="og:updated_time" content="2017-07-11T13:14:34.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="机器学习 2.1 监督学习之线性回归">
+<meta name="twitter:description" content="监督学习本章继续研究监督学习的问题。 ##1 回归问题 我们随机制造一个样本空间\({x 2} \geqslant 2{x 1} + 1\)，对于对空间进行分类。具体例子如下：  对于这些样本，假定可以通过二维线性曲线进行分类。然后模拟出某条曲线，使样本得到一个很好的分类。 这个分类问题的样本的y值只有0或1(0-1分布或伯努利分布)，即表示在直线上面或直线下面。如果用之前的线性回归结果将非常">
+<meta name="twitter:image" content="http://yoursite.com/images/监督学习-分类问题样本.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Muse',
+    sidebar: {"position":"left","display":"post","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2017/06/13/机器学习-2.2-监督学习之分类/"/>
+
+
+
+
+
+  <title>机器学习 2.1 监督学习之线性回归 | Hexo</title><!-- hexo-inject:begin --><!-- hexo-inject:end -->
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="">
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <!-- hexo-inject:begin --><!-- hexo-inject:end --><div class="container sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Hexo</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2017/06/13/机器学习-2.2-监督学习之分类/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="John Doe">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Hexo">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">机器学习 2.1 监督学习之线性回归</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2017-06-13T21:20:17+08:00">
+                2017-06-13
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <script type="text/javascript" src="/Users/zcy/Desktop/study/git/MathJax-master/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+<h1 id="监督学习"><a href="#监督学习" class="headerlink" title="监督学习"></a>监督学习</h1><p>本章继续研究监督学习的问题。</p>
+<p>##1 回归问题</p>
+<p>我们随机制造一个样本空间\({x<em> 2} \geqslant 2{x</em> 1} + 1\)，对于对空间进行分类。具体例子如下：</p>
+<p><img src="/images/监督学习-分类问题样本.png" width="50%" height="50%" align="center/"></p>
+<p>对于这些样本，假定可以通过二维线性曲线进行分类。然后模拟出某条曲线，使样本得到一个很好的分类。</p>
+<p>这个分类问题的样本的y值只有0或1(0-1分布或伯努利分布)，即表示在直线上面或直线下面。如果用之前的线性回归结果将非常糟糕。因为对于分类问题，线性回归得到的线性曲线，得到的\(y &gt; 1\)或\(y &lt; 0\)这些是没有意义的，肯定是错误的。因此引入了逻辑回归函数，如下：</p>
+$$h(z) = \frac{1}{{1 + {e^{ - z}}}}$$
+
+<p>函数曲线如下：</p>
+<p><img src="/images/监督学习-分类问题辅助函数.png" width="50%" height="50%" align="center/"></p>
+<p>如果我们设置\(z = {\theta _1}{x _1} + {\theta _0} - {x _2}\)。因此，对于分类问题就可以转化为：对于\({x _2} \geqslant {\theta _1}{x _1} + {\theta _0}\)就可以转化为h(z)趋向于0的程度，对于\({x _2} \leqslant {\theta _1}{x _1} + {\theta _0}\)就可以转化为h(z)趋向于1的程度。我们简化为如下公式:</p>
+$$z = {\theta _1}{x _1} + {\theta _0}{x _0} + {\theta _2}{x _2} = {\theta ^T}x$$
+
+<p>其中,\({x _0} = 1\)，\({\theta _2} =  - 1\)。</p>
+<h2 id="2-回归问题推导"><a href="#2-回归问题推导" class="headerlink" title="2 回归问题推导"></a>2 回归问题推导</h2><p>我们求辅助函数的导数，以备后来使用：</p>
+$$h'(z) = (\frac{1}{{1 + {e^{ - z}}}})' =  - \frac{{ - {e^{ - z}}}}{{{{(1 + {e^{ - z}})}^2}}} = \frac{1}{{1 + {e^{ - z}}}}(1 - 1 + {e^{ - z}}) = h(z)(1 - h(z))$$
+
+<p>接下来我们从公式角度对问题进行建模分析与推导。</p>
+<p>这里我们将我们的函数\({h_\theta }(x)\)转化为如下形式:</p>
+$${h_\theta }(x) = \frac{1}{{1 + {e^{ - {\theta ^T}x}}}}$$
+
+<p>对于0-1分布，由于\({h<em>\theta }(x)\)只能为0或1。所以，在已知\(x\)和\({\theta}\)的情况下，我们可以认为有\({h</em>\theta }(x)\)的概率得到\(y=1\)。因此有如下公式：<br>$$p(y = 1|x,\theta ) = {h_\theta }(x)$$$$p(y = 0|x,\theta ) = 1 - {h_\theta }(x)$$
+<br>综合两个公式有如下公式：</p>
+$$p(y|x,\theta ) = {h_\theta }{(x)^y}{(1 - {h _\theta }(x))^{(1 - y)}}$$
+
+<p>即在已经样本的情况下得到准确的\(y\)，即要使用极大释然方法，得到样本概率乘积的最大值,即得到下式的最大值：</p>
+$$L(\theta ) = \prod\limits _{i = 1}^m {{h _\theta }{{(x{}^i)}^{{y^i}}}{{(1 - {h _\theta }({x^i}))}^{(1 - {y^i})}}} $$
+<p>取自然对数，对其中一个维度\({\theta _j}\)求偏导数，如下：</p>
+$$\ell ({\theta _j}) = \frac{{\partial \ln (L(\theta ))}}{{\partial {\theta _j}}} = \frac{\partial } {{\partial {\theta _j}}}(\sum\limits _{i = 1}^m {({y^i}\ln ({h _\theta }(x{}^i)) + (1 - {y^i})} \ln (1 - {h _\theta }(x{}^i))))$$ 
+
+<p>我们使用一个辅助函数\(z = {\theta ^T}x\), 并且\(\ln x\)的倒数是\(\frac{1}{x}\)。<br>又由于复合函数有如下求导法则：</p>
+$$\frac{{df(g(x))}}{{dx}} = \frac{{df(z)}}{{dz}}g(x)'$$
+
+<p>其中\(z = g(x)\)。。(这里再次强调下标识维度，上表是样本编号)。所以有：</p>
+$$\ell ({\theta _j}) = \frac{{\partial L(\theta )}}{{\partial {\theta _j}}} = \frac{\partial }{{\partial {\theta _j}}}(\sum\limits _{i = 1}^m {({y^i}\ln ({h _\theta }(x{}^i)) + (1 - {y^i})} \ln (1 - {h _\theta }(x{}^i))))$$
+<p>这里设\(z = {\theta ^T}x\)，有：</p>
+$$\ell ({\theta _j}) = \sum\limits _{i = 1}^m {({y^i}\frac{1}{{h(z)}}h'(z) + (1 - {y^i})} \frac{1}{{1 - h(z)}}( - h'(z)))$$
+<p>将之前的倒数公式带入其中,有:</p>
+$$\ell ({\theta _j}) = \sum\limits _{i = 1}^m {(x _j^i(y - {h _\theta }({x^i})))} $$
+
+<p>因此这样就可以使用如下的式子学习样本值：</p>
+$${\theta _j} = {\theta _j} + \alpha \sum\limits _{i = 1}^m {(x _j^i(y - {h _\theta }({x^i})))} $$
+<h2 id="3-代码"><a href="#3-代码" class="headerlink" title="3 代码"></a>3 代码</h2><p>从这一章开始讲代码从matlab转化更为通用的python。分类代码如下:</p>
+<pre><code>import random
+import math
+import numpy as np
+from matplotlib import pyplot as plt
+
+#NSample= 50
+k = 2
+b = 1
+x1_res = [-0.711, -0.2798, 0.4258, 0.4108, 0.0492, -0.842, -0.6036, -0.8394, 0.395, -0.8612, 0.806, 0.1476, 0.5464,
+          0.3992,
+          0.8326, 0.76, -0.7288, 0.0718, -0.4436, 0.8448, -0.017, -0.108, -0.4032, -0.9678, -0.4322, -0.9024, -0.0146,
+          -0.5346, -0.3808, 0.0498, 0.6376, -0.3946, 0.5896, -0.9504, 0.2046, -0.0994, 0.468, -0.9236, 0.0996, 0.4366,
+          -0.167, 0.9618, 0.5796, -0.383, 0.0254, -0.367, 0.0734, -0.8434, -0.9948, -0.0188]
+
+x2_res = [-0.5108, -0.1254, 0.6166, 0.5296, 0.5758, -0.5972, 0.3994, 0.9808, 0.7134, -0.9414, -0.098, -0.2778, 0.667,
+          0.1916, -0.0298, -0.5124, -0.509, -0.9754, 0.261, 0.4256, -0.7104, 0.8398, 0.7094, -0.5558, -0.799, 0.666,
+          0.392,
+          0.6688, 0.7832, 0.6372, -0.788, -0.1138, 0.0922, -0.6254, -0.1456, 0.3608, 0.4694, -0.8946, 0.9708, 0.8736,
+          -0.5254, 0.0252, 0.6554, -0.2486, 0.9064, -0.35, -0.7724, 0.131, 0.4446, 0.2468]
+
+def make_samples(x0_arr,x1_arr,x2_arr,y_arr):
+  # classified by x_2 = 2*x_1 + 1 . (x_1,x_2) is the point of 2-D plane
+  # y is 0 or 1, means &apos;x_2 &gt;= 2*x_1 + 1 &apos;  or &apos;x_2 &lt; 2*x_1 + 1&apos;
+  for i in range(len(x1_res)):
+    x0_arr.append(1)
+    x1_arr.append(x1_res[i])
+    x2_arr.append(x2_res[i])
+    y_arr.append(0 if (x2_arr[i] &gt;= k * x1_arr[i] + b ) else 1)
+
+def h(z):
+  return 1/(1 + math.exp(-1*z))
+
+def h_xita(x0,x1,x2,xita):
+  return h(transvection([x0,x1,x2], xita))
+
+def derH(z):
+  return h(z)(1-h(z))
+
+def transvection(a,b):
+  return np.dot(a, b)
+
+def J(x0_arr,x1_arr,x2_arr,y_arr,xita):
+  sum = 0;
+  length = len(x1_arr)
+  for i in range(length):
+    sum = sum + ( h_xita(x0_arr[i],x1_arr[i],x2_arr[i],xita) - y_arr[0] )**2
+  return sum/2
+
+def updateXita(x0_arr,x1_arr,x2_arr,y_arr,xita,a,update_x):
+  sum = 0;
+  length = len(x0_arr)
+  for i in range(length):
+    sum = sum + ( y_arr[i] - h_xita(x0_arr[i],x1_arr[i],x2_arr[i],xita) ) * update_x[i]
+  return sum*a
+
+def showPic(k,b,point_x1_arr,point_x2_arr):
+  ## show line
+  X = np.arange(-1,1,0.001)
+  Y=[]
+  for i in range(X.size):
+    Y.append(k*X[i]+b)
+  plt.plot(X, Y, &apos;b--&apos;, label=&quot;logistic&quot;)
+  ## show points
+  for i in range(len(point_x1_arr)):
+    if(point_x2_arr[i]&gt;k*point_x1_arr[i]+b):
+      plt.plot(point_x1_arr[i],point_x2_arr[i],&apos;b--&apos;,marker = &apos;x&apos;, color = &apos;g&apos;)
+    else:
+      plt.plot(point_x1_arr[i],point_x2_arr[i],&apos;r--&apos;,marker = &apos;+&apos;, color = &apos;r&apos;)
+  plt.xlabel(&quot;x1&quot;)
+  plt.ylabel(&quot;x2&quot;)
+  plt.figure(figsize=(8, 4))
+  plt.show()
+
+if __name__== &quot;__main__&quot;:
+  x0_arr = []
+  x1_arr = []
+  x2_arr = []
+  y_arr = []
+  make_samples(x0_arr,x1_arr,x2_arr,y_arr)
+
+  xita = [1,20,-1]
+  a = 0.01
+  limit = 4
+
+  count = 0
+  while 1:
+    j = J(x0_arr, x1_arr, x2_arr, y_arr, xita)
+    print(&quot;j=&quot;,j)
+    if j &lt; limit:
+      break;
+    xita[0] = xita[0] + updateXita(x0_arr, x1_arr, x2_arr, y_arr, xita, a, x0_arr)
+    xita[1] = xita[1] + updateXita(x0_arr, x1_arr, x2_arr, y_arr, xita, a, x1_arr)
+    count = count + 1
+    print(&quot;cout=&quot;,count)
+    print(&quot;xita0=&quot;,xita[0],&quot; xita1=&quot;,xita[1])
+
+  showPic(xita[1],xita[0],x1_arr,x2_arr)
+  print(xita)
+</code></pre><p>经过数论迭代分析，得到xita0= 2.7841420917875297  xita1= 4.850051144306185<br>\( \theta _0 = 2.7841420917875297 \)，\( \theta _1 = 4.850051144306185 \)。曲线如下，可以看出得到的曲线对样本实现了很好的分割。</p>
+<p><img src="/images/监督学习-分类问题计算结果.png" width="50%" height="50%" align="center/"></p>
+<blockquote>
+<p>未来代码将会维护在<a href="https://github.com/zhengchenyu/mlearning" target="_blank" rel="external">https://github.com/zhengchenyu/mlearning</a></p>
+</blockquote>
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2017/06/10/机器学习-2.1-监督学习之线性回归/" rel="next" title="机器学习 2.1 监督学习之线性回归">
+                <i class="fa fa-chevron-left"></i> 机器学习 2.1 监督学习之线性回归
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.gif"
+               alt="John Doe" />
+          <p class="site-author-name" itemprop="name">John Doe</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+          
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives/">
+                <span class="site-state-item-count">4</span>
+                <span class="site-state-item-name">posts</span>
+              </a>
+            </div>
+          
+
+          
+
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#监督学习"><span class="nav-number">1.</span> <span class="nav-text">监督学习</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#2-回归问题推导"><span class="nav-number">1.1.</span> <span class="nav-text">2 回归问题推导</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-代码"><span class="nav-number">1.2.</span> <span class="nav-text">3 代码</span></a></li></ol></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2017</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">John Doe</span>
+</div>
+
+
+<div class="powered-by">
+  Powered by <a class="theme-link" href="https://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  Theme -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Muse
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.1"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.1"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.1"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.1"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.1"></script><!-- hexo-inject:begin --><!-- Begin: Injected MathJax -->
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({"tex2jax":{"inlineMath":[["$","$"],["\\(","\\)"]]}});
+</script>
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Queue(function() {
+    var all = MathJax.Hub.getAllJax(), i;
+    for(i=0; i < all.length; i += 1) {
+      all[i].SourceElement().parentNode.className += ' has-jax';
+    }
+  });
+</script>
+
+<script type="text/javascript" src="//cdn.bootcss.com/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+<!-- End: Injected MathJax -->
+<!-- hexo-inject:end -->
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
