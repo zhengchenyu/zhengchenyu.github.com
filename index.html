@@ -201,7 +201,7 @@
             
               <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
             
-            Startseite
+            Home
           </a>
         </li>
       
@@ -211,7 +211,7 @@
             
               <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
             
-            Archiv
+            Archives
           </a>
         </li>
       
@@ -283,7 +283,7 @@
                 <i class="fa fa-calendar-o"></i>
               </span>
               
-                <span class="post-meta-item-text">Veröffentlicht am</span>
+                <span class="post-meta-item-text">Posted on</span>
               
               <time title="Post created" itemprop="dateCreated datePublished" datetime="2017-06-13T21:20:17+08:00">
                 2017-06-13
@@ -366,107 +366,11 @@
 
 <p>因此这样就可以使用如下的式子学习样本值：</p>
 $${\theta _j} = {\theta _j} + \alpha \sum\limits _{i = 1}^m {(x _j^i(y - {h _\theta }({x^i})))} $$
-<h2 id="3-代码"><a href="#3-代码" class="headerlink" title="3 代码"></a>3 代码</h2><p>从这一章开始讲代码从matlab转化更为通用的python。分类代码如下:</p>
-<pre><code>import random
-import math
-import numpy as np
-from matplotlib import pyplot as plt
-
-#NSample= 50
-k = 2
-b = 1
-x1_res = [-0.711, -0.2798, 0.4258, 0.4108, 0.0492, -0.842, -0.6036, -0.8394, 0.395, -0.8612, 0.806, 0.1476, 0.5464,
-          0.3992,
-          0.8326, 0.76, -0.7288, 0.0718, -0.4436, 0.8448, -0.017, -0.108, -0.4032, -0.9678, -0.4322, -0.9024, -0.0146,
-          -0.5346, -0.3808, 0.0498, 0.6376, -0.3946, 0.5896, -0.9504, 0.2046, -0.0994, 0.468, -0.9236, 0.0996, 0.4366,
-          -0.167, 0.9618, 0.5796, -0.383, 0.0254, -0.367, 0.0734, -0.8434, -0.9948, -0.0188]
-
-x2_res = [-0.5108, -0.1254, 0.6166, 0.5296, 0.5758, -0.5972, 0.3994, 0.9808, 0.7134, -0.9414, -0.098, -0.2778, 0.667,
-          0.1916, -0.0298, -0.5124, -0.509, -0.9754, 0.261, 0.4256, -0.7104, 0.8398, 0.7094, -0.5558, -0.799, 0.666,
-          0.392,
-          0.6688, 0.7832, 0.6372, -0.788, -0.1138, 0.0922, -0.6254, -0.1456, 0.3608, 0.4694, -0.8946, 0.9708, 0.8736,
-          -0.5254, 0.0252, 0.6554, -0.2486, 0.9064, -0.35, -0.7724, 0.131, 0.4446, 0.2468]
-
-def make_samples(x0_arr,x1_arr,x2_arr,y_arr):
-  # classified by x_2 = 2*x_1 + 1 . (x_1,x_2) is the point of 2-D plane
-  # y is 0 or 1, means &apos;x_2 &gt;= 2*x_1 + 1 &apos;  or &apos;x_2 &lt; 2*x_1 + 1&apos;
-  for i in range(len(x1_res)):
-    x0_arr.append(1)
-    x1_arr.append(x1_res[i])
-    x2_arr.append(x2_res[i])
-    y_arr.append(0 if (x2_arr[i] &gt;= k * x1_arr[i] + b ) else 1)
-
-def h(z):
-  return 1/(1 + math.exp(-1*z))
-
-def h_xita(x0,x1,x2,xita):
-  return h(transvection([x0,x1,x2], xita))
-
-def derH(z):
-  return h(z)(1-h(z))
-
-def transvection(a,b):
-  return np.dot(a, b)
-
-def J(x0_arr,x1_arr,x2_arr,y_arr,xita):
-  sum = 0;
-  length = len(x1_arr)
-  for i in range(length):
-    sum = sum + ( h_xita(x0_arr[i],x1_arr[i],x2_arr[i],xita) - y_arr[0] )**2
-  return sum/2
-
-def updateXita(x0_arr,x1_arr,x2_arr,y_arr,xita,a,update_x):
-  sum = 0;
-  length = len(x0_arr)
-  for i in range(length):
-    sum = sum + ( y_arr[i] - h_xita(x0_arr[i],x1_arr[i],x2_arr[i],xita) ) * update_x[i]
-  return sum*a
-
-def showPic(k,b,point_x1_arr,point_x2_arr):
-  ## show line
-  X = np.arange(-1,1,0.001)
-  Y=[]
-  for i in range(X.size):
-    Y.append(k*X[i]+b)
-  plt.plot(X, Y, &apos;b--&apos;, label=&quot;logistic&quot;)
-  ## show points
-  for i in range(len(point_x1_arr)):
-    if(point_x2_arr[i]&gt;k*point_x1_arr[i]+b):
-      plt.plot(point_x1_arr[i],point_x2_arr[i],&apos;b--&apos;,marker = &apos;x&apos;, color = &apos;g&apos;)
-    else:
-      plt.plot(point_x1_arr[i],point_x2_arr[i],&apos;r--&apos;,marker = &apos;+&apos;, color = &apos;r&apos;)
-  plt.xlabel(&quot;x1&quot;)
-  plt.ylabel(&quot;x2&quot;)
-  plt.figure(figsize=(8, 4))
-  plt.show()
-
-if __name__== &quot;__main__&quot;:
-  x0_arr = []
-  x1_arr = []
-  x2_arr = []
-  y_arr = []
-  make_samples(x0_arr,x1_arr,x2_arr,y_arr)
-
-  xita = [1,20,-1]
-  a = 0.01
-  limit = 4
-
-  count = 0
-  while 1:
-    j = J(x0_arr, x1_arr, x2_arr, y_arr, xita)
-    print(&quot;j=&quot;,j)
-    if j &lt; limit:
-      break;
-    xita[0] = xita[0] + updateXita(x0_arr, x1_arr, x2_arr, y_arr, xita, a, x0_arr)
-    xita[1] = xita[1] + updateXita(x0_arr, x1_arr, x2_arr, y_arr, xita, a, x1_arr)
-    count = count + 1
-    print(&quot;cout=&quot;,count)
-    print(&quot;xita0=&quot;,xita[0],&quot; xita1=&quot;,xita[1])
-
-  showPic(xita[1],xita[0],x1_arr,x2_arr)
-  print(xita)
-</code></pre><p>经过数论迭代分析，得到xita0= 2.7841420917875297  xita1= 4.850051144306185<br>\( \theta _0 = 2.7841420917875297 \)，\( \theta _1 = 4.850051144306185 \)。曲线如下，可以看出得到的曲线对样本实现了很好的分割。</p>
-<p><img src="/images/监督学习-分类问题计算结果.png" width="50%" height="50%" align="center/"></p>
+<h2 id="3-代码"><a href="#3-代码" class="headerlink" title="3 代码"></a>3 代码</h2><p>从这一章开始讲代码从matlab转化更为通用的python。</p>
+<p>我们选取合适的步长，当\(J({\theta})\)小于合适的阈值(这里配置为4)，就认为迭代完成。分类代码如下:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div><div class="line">64</div><div class="line">65</div><div class="line">66</div><div class="line">67</div><div class="line">68</div><div class="line">69</div><div class="line">70</div><div class="line">71</div><div class="line">72</div><div class="line">73</div><div class="line">74</div><div class="line">75</div><div class="line">76</div><div class="line">77</div><div class="line">78</div><div class="line">79</div><div class="line">80</div><div class="line">81</div><div class="line">82</div><div class="line">83</div><div class="line">84</div><div class="line">85</div><div class="line">86</div><div class="line">87</div><div class="line">88</div><div class="line">89</div><div class="line">90</div><div class="line">91</div><div class="line">92</div><div class="line">93</div><div class="line">94</div><div class="line">95</div><div class="line">96</div><div class="line">97</div><div class="line">98</div><div class="line">99</div><div class="line">100</div><div class="line">101</div><div class="line">102</div><div class="line">103</div><div class="line">104</div><div class="line">105</div></pre></td><td class="code"><pre><div class="line">import random</div><div class="line">import math</div><div class="line">import numpy as np</div><div class="line">from matplotlib import pyplot as plt</div><div class="line"></div><div class="line">#NSample= 50</div><div class="line">k = 2</div><div class="line">b = 1</div><div class="line">x1_res = [-0.711, -0.2798, 0.4258, 0.4108, 0.0492, -0.842, -0.6036, -0.8394, 0.395, -0.8612, 0.806, 0.1476, 0.5464,</div><div class="line">          0.3992,</div><div class="line">          0.8326, 0.76, -0.7288, 0.0718, -0.4436, 0.8448, -0.017, -0.108, -0.4032, -0.9678, -0.4322, -0.9024, -0.0146,</div><div class="line">          -0.5346, -0.3808, 0.0498, 0.6376, -0.3946, 0.5896, -0.9504, 0.2046, -0.0994, 0.468, -0.9236, 0.0996, 0.4366,</div><div class="line">          -0.167, 0.9618, 0.5796, -0.383, 0.0254, -0.367, 0.0734, -0.8434, -0.9948, -0.0188]</div><div class="line"></div><div class="line">x2_res = [-0.5108, -0.1254, 0.6166, 0.5296, 0.5758, -0.5972, 0.3994, 0.9808, 0.7134, -0.9414, -0.098, -0.2778, 0.667,</div><div class="line">          0.1916, -0.0298, -0.5124, -0.509, -0.9754, 0.261, 0.4256, -0.7104, 0.8398, 0.7094, -0.5558, -0.799, 0.666,</div><div class="line">          0.392,</div><div class="line">          0.6688, 0.7832, 0.6372, -0.788, -0.1138, 0.0922, -0.6254, -0.1456, 0.3608, 0.4694, -0.8946, 0.9708, 0.8736,</div><div class="line">          -0.5254, 0.0252, 0.6554, -0.2486, 0.9064, -0.35, -0.7724, 0.131, 0.4446, 0.2468]</div><div class="line"></div><div class="line">def make_samples(x0_arr,x1_arr,x2_arr,y_arr):</div><div class="line">  # classified by x_2 = 2*x_1 + 1 . (x_1,x_2) is the point of 2-D plane</div><div class="line">  # y is 0 or 1, means &apos;x_2 &gt;= 2*x_1 + 1 &apos;  or &apos;x_2 &lt; 2*x_1 + 1&apos;</div><div class="line">  for i in range(len(x1_res)):</div><div class="line">    x0_arr.append(1)</div><div class="line">    x1_arr.append(x1_res[i])</div><div class="line">    x2_arr.append(x2_res[i])</div><div class="line">    y_arr.append(0 if (x2_arr[i] &gt;= k * x1_arr[i] + b ) else 1)</div><div class="line"></div><div class="line">def h(z):</div><div class="line">  return 1/(1 + math.exp(-1*z))</div><div class="line"></div><div class="line">def h_xita(x0,x1,x2,xita):</div><div class="line">  return h(transvection([x0,x1,x2], xita))</div><div class="line"></div><div class="line">def derH(z):</div><div class="line">  return h(z)(1-h(z))</div><div class="line"></div><div class="line">def transvection(a,b):</div><div class="line">  return np.dot(a, b)</div><div class="line"></div><div class="line">def J(x0_arr,x1_arr,x2_arr,y_arr,xita):</div><div class="line">  sum = 0;</div><div class="line">  length = len(x1_arr)</div><div class="line">  for i in range(length):</div><div class="line">    sum = sum + ( h_xita(x0_arr[i],x1_arr[i],x2_arr[i],xita) - y_arr[0] )**2</div><div class="line">  return sum/2</div><div class="line"></div><div class="line">def updateXita(x0_arr,x1_arr,x2_arr,y_arr,xita,a,update_x):</div><div class="line">  sum = 0;</div><div class="line">  length = len(x0_arr)</div><div class="line">  for i in range(length):</div><div class="line">    sum = sum + ( y_arr[i] - h_xita(x0_arr[i],x1_arr[i],x2_arr[i],xita) ) * update_x[i]</div><div class="line">  return sum*a</div><div class="line"></div><div class="line">def showPic(k,b,point_x1_arr,point_x2_arr):</div><div class="line">  ## show line</div><div class="line">  X = np.arange(-1,1,0.001)</div><div class="line">  Y=[]</div><div class="line">  for i in range(X.size):</div><div class="line">    Y.append(k*X[i]+b)</div><div class="line">  plt.plot(X, Y, &apos;b--&apos;, label=&quot;logistic&quot;)</div><div class="line">  ## show points</div><div class="line">  for i in range(len(point_x1_arr)):</div><div class="line">    if(point_x2_arr[i]&gt;2*point_x1_arr[i]+1):</div><div class="line">      plt.plot(point_x1_arr[i],point_x2_arr[i],&apos;b--&apos;,marker = &apos;x&apos;, color = &apos;g&apos;)</div><div class="line">    else:</div><div class="line">      plt.plot(point_x1_arr[i],point_x2_arr[i],&apos;r--&apos;,marker = &apos;+&apos;, color = &apos;r&apos;)</div><div class="line">  plt.xlabel(&quot;x1&quot;)</div><div class="line">  plt.ylabel(&quot;x2&quot;)</div><div class="line">  plt.figure(figsize=(8, 4))</div><div class="line">  plt.show()</div><div class="line"></div><div class="line">if __name__== &quot;__main__&quot;:</div><div class="line">  x0_arr = []</div><div class="line">  x1_arr = []</div><div class="line">  x2_arr = []</div><div class="line">  y_arr = []</div><div class="line">  make_samples(x0_arr,x1_arr,x2_arr,y_arr)</div><div class="line"></div><div class="line">  xita = [1,20,-1]</div><div class="line">  a = 0.01</div><div class="line">  limit = 4</div><div class="line"></div><div class="line">  count = 0</div><div class="line">  while 1:</div><div class="line">    j = J(x0_arr, x1_arr, x2_arr, y_arr, xita)</div><div class="line">    print(&quot;j=&quot;,j)</div><div class="line">    if j &lt; limit:</div><div class="line">      break;</div><div class="line">    xita[0] = xita[0] + updateXita(x0_arr, x1_arr, x2_arr, y_arr, xita, a, x0_arr)</div><div class="line">    xita[1] = xita[1] + updateXita(x0_arr, x1_arr, x2_arr, y_arr, xita, a, x1_arr)</div><div class="line">    count = count + 1</div><div class="line">    print(&quot;cout=&quot;,count)</div><div class="line">    print(&quot;xita0=&quot;,xita[0],&quot; xita1=&quot;,xita[1])</div><div class="line"></div><div class="line">  showPic(xita[1],xita[0],x1_arr,x2_arr)</div><div class="line">  print(xita)</div><div class="line">```经过数论迭代分析，得到xita0= 2.7841420917875297  xita1= 4.850051144306185\\( \theta _0 = 2.7841420917875297 \\)，\\( \theta _1 = 4.850051144306185 \\)。得到如下结果:</div><div class="line"></div><div class="line">&lt;img src=&quot;/images/监督学习-分类问题计算结果1.png&quot; width=50% height=50% align=center/&gt;</div><div class="line"></div><div class="line">## 4 代码的改进</div><div class="line"></div><div class="line">经过试验发现上面的算法的问题是如果选取合适的阈值。这里将算法修改为两次的\\(J(&#123;\theta&#125;)\\)的差值小于0.00001，这样就任务函数已经几近收敛,然后结束迭代。另外，如果\\(J(&#123;\theta&#125;)\\)的值某一次迭代增大了,说明算法异常或者迭代参数设置过大。修改后的代码如下:</div></pre></td></tr></table></figure>
+<p>  while 1:<br>    j = J(x0_arr, x1_arr, x2_arr, y_arr, xita)<br>    print(“j=”,j)<br>    if j &gt; j_last:<br>      print(“算法异常或选取迭代系数过大”)<br>      break;<br>    if j_last - j &lt; 0.00001:<br>      print(“out “,j_last - j)<br>      break;<br>    j_last = j<br>    xita[0] = xita[0] + updateXita(x0_arr, x1_arr, x2_arr, y_arr, xita, a, x0_arr)<br>    xita[1] = xita[1] + updateXita(x0_arr, x1_arr, x2_arr, y_arr, xita, a, x1_arr)<br>```<br>得到如下结果:</p>
+<p><img src="/images/监督学习-分类问题计算结果2.png" width="50%" height="50%" align="center/"></p>
 <blockquote>
 <p>未来代码将会维护在<a href="https://github.com/zhengchenyu/mlearning" target="_blank" rel="external">https://github.com/zhengchenyu/mlearning</a></p>
 </blockquote>
@@ -542,7 +446,7 @@ if __name__== &quot;__main__&quot;:
                 <i class="fa fa-calendar-o"></i>
               </span>
               
-                <span class="post-meta-item-text">Veröffentlicht am</span>
+                <span class="post-meta-item-text">Posted on</span>
               
               <time title="Post created" itemprop="dateCreated datePublished" datetime="2017-06-10T21:52:17+08:00">
                 2017-06-10
@@ -774,7 +678,7 @@ $${\omega ^i} = {e^{ - \frac{{{{({x^i} - 20)}^2}}}{{2{\tau ^2}}}}}$$
                 <i class="fa fa-calendar-o"></i>
               </span>
               
-                <span class="post-meta-item-text">Veröffentlicht am</span>
+                <span class="post-meta-item-text">Posted on</span>
               
               <time title="Post created" itemprop="dateCreated datePublished" datetime="2017-06-10T21:43:10+08:00">
                 2017-06-10
@@ -898,7 +802,7 @@ $${\omega ^i} = {e^{ - \frac{{{{({x^i} - 20)}^2}}}{{2{\tau ^2}}}}}$$
                 <i class="fa fa-calendar-o"></i>
               </span>
               
-                <span class="post-meta-item-text">Veröffentlicht am</span>
+                <span class="post-meta-item-text">Posted on</span>
               
               <time title="Post created" itemprop="dateCreated datePublished" datetime="2017-05-06T11:04:07+08:00">
                 2017-05-06
@@ -1017,7 +921,7 @@ $${\omega ^i} = {e^{ - \frac{{{{({x^i} - 20)}^2}}}{{2{\tau ^2}}}}}$$
             <div class="site-state-item site-state-posts">
               <a href="/archives/">
                 <span class="site-state-item-count">4</span>
-                <span class="site-state-item-name">Artikel</span>
+                <span class="site-state-item-name">posts</span>
               </a>
             </div>
           
@@ -1071,7 +975,7 @@ $${\omega ^i} = {e^{ - \frac{{{{({x^i} - 20)}^2}}}{{2{\tau ^2}}}}}$$
 
 
 <div class="powered-by">
-  Erstellt mit  <a class="theme-link" href="https://hexo.io">Hexo</a>
+  Powered by <a class="theme-link" href="https://hexo.io">Hexo</a>
 </div>
 
 <div class="theme-info">
