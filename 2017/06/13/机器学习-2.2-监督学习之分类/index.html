@@ -27,7 +27,7 @@
 <meta property="og:image" content="http://yoursite.com/images/机器学习/监督学习-分类问题计算结果2.png">
 <meta property="og:image" content="http://yoursite.com/images/机器学习/牛顿法示意图.png">
 <meta property="og:image" content="http://yoursite.com/images/机器学习/监督学习-分类问题计算结果3.png">
-<meta property="og:updated_time" content="2017-07-13T13:14:39.000Z">
+<meta property="og:updated_time" content="2017-07-13T13:35:10.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="机器学习 2.1 监督学习之线性回归">
 <meta name="twitter:description" content="监督学习本章继续研究监督学习的问题。 1 回归问题我们随机制造一个样本空间\({x _2} \geqslant 2{x _1} + 1\)，对于对空间进行分类。具体例子如下：  对于这些样本，假定可以通过二维线性曲线进行分类。然后模拟出某条曲线，使样本得到一个很好的分类。 这个分类问题的样本的y值只有0或1(0-1分布或伯努利分布)，即表示在直线上面或直线下面。如果用之前的线性回归结果将非常糟">
@@ -316,7 +316,7 @@ $$h(z) = \frac{1}{{1 + {e^{ - z}}}}$$
 $$z = {\theta _1}{x _1} + {\theta _0}{x _0} + {\theta _2}{x _2} = {\theta ^T}x$$
 
 <p>其中,\({x _0} = 1\)，\({\theta _2} =  - 1\)。</p>
-<p>##2 回归问题推导<br>我们求辅助函数的导数，以备后来使用：</p>
+<h2 id="2-回归问题推导"><a href="#2-回归问题推导" class="headerlink" title="2 回归问题推导"></a>2 回归问题推导</h2><p>我们求辅助函数的导数，以备后来使用：</p>
 
 $$h'(z) = (\frac{1}{{1 + {e^{ - z}}}})' =  - \frac{{ - {e^{ - z}}}}{{{{(1 + {e^{ - z}})}^2}}} = \frac{1}{{1 + {e^{ - z}}}}(1 - 1 + {e^{ - z}}) = h(z)(1 - h(z))$$
 
@@ -595,7 +595,7 @@ if __name__== &quot;__main__&quot;:
         <p><span>本文标题:</span><a href="/2017/06/13/机器学习-2.2-监督学习之分类/">机器学习 2.1 监督学习之线性回归</a></p>
         <p><span>文章作者:</span><a href="/" title="回到主页">John Doe</a></p>
         <p><span>发布时间:</span>2017-06-13, 21:20:17</p>
-        <p><span>最后更新:</span>2017-07-13, 21:14:39</p>
+        <p><span>最后更新:</span>2017-07-13, 21:35:10</p>
         <p>
             <span>原始链接:</span><a class="post-url" href="/2017/06/13/机器学习-2.2-监督学习之分类/" title="机器学习 2.1 监督学习之线性回归">http://yoursite.com/2017/06/13/机器学习-2.2-监督学习之分类/</a>
             <span class="copy-path" data-clipboard-text="原文: http://yoursite.com/2017/06/13/机器学习-2.2-监督学习之分类/　　作者: John Doe" title="点击复制文章链接"><i class="fa fa-clipboard"></i></span>
@@ -625,7 +625,7 @@ if __name__== &quot;__main__&quot;:
     <div id="toc" class="toc-article">
         <strong class="toc-title">文章目录</strong>
         
-            <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#监督学习"><span class="toc-number">1.</span> <span class="toc-text">监督学习</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#1-回归问题"><span class="toc-number">1.1.</span> <span class="toc-text">1 回归问题</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-代码"><span class="toc-number">1.2.</span> <span class="toc-text">3 代码</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#4-代码的改进"><span class="toc-number">1.3.</span> <span class="toc-text">4 代码的改进</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#5-牛顿法改进"><span class="toc-number">1.4.</span> <span class="toc-text">5 牛顿法改进</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#6-参考文献"><span class="toc-number">1.5.</span> <span class="toc-text">6 参考文献</span></a></li></ol></li></ol>
+            <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#监督学习"><span class="toc-number">1.</span> <span class="toc-text">监督学习</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#1-回归问题"><span class="toc-number">1.1.</span> <span class="toc-text">1 回归问题</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-回归问题推导"><span class="toc-number">1.2.</span> <span class="toc-text">2 回归问题推导</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-代码"><span class="toc-number">1.3.</span> <span class="toc-text">3 代码</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#4-代码的改进"><span class="toc-number">1.4.</span> <span class="toc-text">4 代码的改进</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#5-牛顿法改进"><span class="toc-number">1.5.</span> <span class="toc-text">5 牛顿法改进</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#6-参考文献"><span class="toc-number">1.6.</span> <span class="toc-text">6 参考文献</span></a></li></ol></li></ol>
         
     </div>
     <style>
