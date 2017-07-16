@@ -11,13 +11,13 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <meta name="format-detection" content="telephone=no" />
-<meta name="author" content="John Doe" />
+<meta name="author" content="zhengchenyu" />
 
 
 
 <meta name="description" content="监督学习本章继续研究监督学习的问题。 1 回归问题我们随机制造一个样本空间\({x _2} \geqslant 2{x _1} + 1\)，对于对空间进行分类。具体例子如下：  对于这些样本，假定可以通过二维线性曲线进行分类。然后模拟出某条曲线，使样本得到一个很好的分类。 这个分类问题的样本的y值只有0或1(0-1分布或伯努利分布)，即表示在直线上面或直线下面。如果用之前的线性回归结果将非常糟">
 <meta property="og:type" content="article">
-<meta property="og:title" content="机器学习 2.1 监督学习之线性回归">
+<meta property="og:title" content="机器学习 2.1 监督学习之逻辑回归">
 <meta property="og:url" content="http://yoursite.com/2017/06/13/机器学习-2.2-监督学习之分类/index.html">
 <meta property="og:site_name" content="Hexo">
 <meta property="og:description" content="监督学习本章继续研究监督学习的问题。 1 回归问题我们随机制造一个样本空间\({x _2} \geqslant 2{x _1} + 1\)，对于对空间进行分类。具体例子如下：  对于这些样本，假定可以通过二维线性曲线进行分类。然后模拟出某条曲线，使样本得到一个很好的分类。 这个分类问题的样本的y值只有0或1(0-1分布或伯努利分布)，即表示在直线上面或直线下面。如果用之前的线性回归结果将非常糟">
@@ -27,9 +27,9 @@
 <meta property="og:image" content="http://yoursite.com/images/机器学习/监督学习-分类问题计算结果2.png">
 <meta property="og:image" content="http://yoursite.com/images/机器学习/牛顿法示意图.png">
 <meta property="og:image" content="http://yoursite.com/images/机器学习/监督学习-分类问题计算结果3.png">
-<meta property="og:updated_time" content="2017-07-13T13:35:10.000Z">
+<meta property="og:updated_time" content="2017-07-16T07:29:28.000Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="机器学习 2.1 监督学习之线性回归">
+<meta name="twitter:title" content="机器学习 2.1 监督学习之逻辑回归">
 <meta name="twitter:description" content="监督学习本章继续研究监督学习的问题。 1 回归问题我们随机制造一个样本空间\({x _2} \geqslant 2{x _1} + 1\)，对于对空间进行分类。具体例子如下：  对于这些样本，假定可以通过二维线性曲线进行分类。然后模拟出某条曲线，使样本得到一个很好的分类。 这个分类问题的样本的y值只有0或1(0-1分布或伯努利分布)，即表示在直线上面或直线下面。如果用之前的线性回归结果将非常糟">
 <meta name="twitter:image" content="http://yoursite.com/images/机器学习/监督学习-分类问题样本.png">
 
@@ -63,7 +63,7 @@
 <link href="//cdn.bootcss.com/font-awesome/4.6.3/css/font-awesome.min.css" rel="stylesheet">
 
 
-<title>机器学习 2.1 监督学习之线性回归 | Hexo</title>
+<title>机器学习 2.1 监督学习之逻辑回归 | Hexo</title>
 
 <script src="//cdn.bootcss.com/jquery/2.2.4/jquery.min.js"></script>
 <script src="//cdn.bootcss.com/clipboard.js/1.5.10/clipboard.min.js"></script>
@@ -106,7 +106,7 @@
             <img src="/img/avatar.png" class="animated zoomIn">
         </a>
         <hgroup>
-          <h1 class="header-author"><a href="/">John Doe</a></h1>
+          <h1 class="header-author"><a href="/">zhengchenyu</a></h1>
         </hgroup>
 
         
@@ -223,7 +223,7 @@
       <nav id="mobile-nav">
       <div class="overlay">
           <div class="slider-trigger"></div>
-          <h1 class="header-author js-mobile-header hide"><a href="/" title="回到主页">John Doe</a></h1>
+          <h1 class="header-author js-mobile-header hide"><a href="/" title="回到主页">zhengchenyu</a></h1>
       </div>
     <div class="intrude-less">
         <header id="header" class="inner">
@@ -231,7 +231,7 @@
                 <img src="/img/avatar.png" class="animated zoomIn">
             </a>
             <hgroup>
-              <h1 class="header-author"><a href="/" title="回到主页">John Doe</a></h1>
+              <h1 class="header-author"><a href="/" title="回到主页">zhengchenyu</a></h1>
             </hgroup>
             
             <nav class="header-menu">
@@ -282,7 +282,7 @@
         
   
     <h1 class="article-title" itemprop="name">
-      机器学习 2.1 监督学习之线性回归
+      机器学习 2.1 监督学习之逻辑回归
     </h1>
   
 
@@ -305,7 +305,7 @@
 <h2 id="1-回归问题"><a href="#1-回归问题" class="headerlink" title="1 回归问题"></a>1 回归问题</h2><p>我们随机制造一个样本空间\({x _2} \geqslant 2{x _1} + 1\)，对于对空间进行分类。具体例子如下：</p>
 <p><img src="/images/机器学习/监督学习-分类问题样本.png" width="50%" height="50%" text-align="center/"></p>
 <p>对于这些样本，假定可以通过二维线性曲线进行分类。然后模拟出某条曲线，使样本得到一个很好的分类。</p>
-<p>这个分类问题的样本的y值只有0或1(0-1分布或伯努利分布)，即表示在直线上面或直线下面。如果用之前的线性回归结果将非常糟糕。因为对于分类问题，线性回归得到的线性曲线，得到的\(y &gt; 1\)或\(y &lt; 0\)这些是没有意义的，肯定是错误的。因此引入了逻辑回归函数，如下：</p>
+<p>这个分类问题的样本的y值只有0或1(0-1分布或伯努利分布)，即表示在直线上面或直线下面。如果用之前的线性回归结果将非常糟糕。因为对于分类问题，线性回归得到的线性曲线，得到的\(y &gt; 1\)或\(y &lt; 0\)这些是没有意义的，肯定是错误的。因此引入了logistic函数，转换为Logistic regression，logistic函数如下：</p>
 
 $$h(z) = \frac{1}{{1 + {e^{ - z}}}}$$
 
@@ -592,13 +592,13 @@ if __name__== &quot;__main__&quot;:
   
     
     <div class="copyright">
-        <p><span>本文标题:</span><a href="/2017/06/13/机器学习-2.2-监督学习之分类/">机器学习 2.1 监督学习之线性回归</a></p>
-        <p><span>文章作者:</span><a href="/" title="回到主页">John Doe</a></p>
+        <p><span>本文标题:</span><a href="/2017/06/13/机器学习-2.2-监督学习之分类/">机器学习 2.1 监督学习之逻辑回归</a></p>
+        <p><span>文章作者:</span><a href="/" title="回到主页">zhengchenyu</a></p>
         <p><span>发布时间:</span>2017-06-13, 21:20:17</p>
-        <p><span>最后更新:</span>2017-07-13, 21:35:10</p>
+        <p><span>最后更新:</span>2017-07-16, 15:29:28</p>
         <p>
-            <span>原始链接:</span><a class="post-url" href="/2017/06/13/机器学习-2.2-监督学习之分类/" title="机器学习 2.1 监督学习之线性回归">http://yoursite.com/2017/06/13/机器学习-2.2-监督学习之分类/</a>
-            <span class="copy-path" data-clipboard-text="原文: http://yoursite.com/2017/06/13/机器学习-2.2-监督学习之分类/　　作者: John Doe" title="点击复制文章链接"><i class="fa fa-clipboard"></i></span>
+            <span>原始链接:</span><a class="post-url" href="/2017/06/13/机器学习-2.2-监督学习之分类/" title="机器学习 2.1 监督学习之逻辑回归">http://yoursite.com/2017/06/13/机器学习-2.2-监督学习之分类/</a>
+            <span class="copy-path" data-clipboard-text="原文: http://yoursite.com/2017/06/13/机器学习-2.2-监督学习之分类/　　作者: zhengchenyu" title="点击复制文章链接"><i class="fa fa-clipboard"></i></span>
             <script> var clipboard = new Clipboard('.copy-path'); </script>
         </p>
         <p>
@@ -609,6 +609,12 @@ if __name__== &quot;__main__&quot;:
 
 
     <nav id="article-nav">
+        
+            <div id="article-nav-newer" class="article-nav-title">
+                <a href="/2017/07/16/机器学习-2.3-监督学习之通用线性模型/">
+                    机器学习-2.3-监督学习之通用线性模型.md
+                </a>
+            </div>
         
         
             <div id="article-nav-older" class="article-nav-title">
@@ -661,7 +667,7 @@ if __name__== &quot;__main__&quot;:
         </div>
         <script>
             window._bd_share_config={
-                "common":{"bdSnsKey":{},"bdText":"机器学习 2.1 监督学习之线性回归　| Hexo　","bdMini":"2","bdMiniList":false,"bdPic":"","bdStyle":"0","bdSize":"24"},"share":{}};with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='http://bdimg.share.baidu.com/static/api/js/share.js?v=89860593.js?cdnversion='+~(-new Date()/36e5)];
+                "common":{"bdSnsKey":{},"bdText":"机器学习 2.1 监督学习之逻辑回归　| Hexo　","bdMini":"2","bdMiniList":false,"bdPic":"","bdStyle":"0","bdSize":"24"},"share":{}};with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='http://bdimg.share.baidu.com/static/api/js/share.js?v=89860593.js?cdnversion='+~(-new Date()/36e5)];
         </script>
     
 
@@ -681,7 +687,9 @@ if __name__== &quot;__main__&quot;:
 
     <div class="scroll" id="post-nav-button">
         
-            <a href="/" title="回到主页"><i class="fa fa-home"></i></a>
+            <a href="/2017/07/16/机器学习-2.3-监督学习之通用线性模型/" title="上一篇: 机器学习-2.3-监督学习之通用线性模型.md">
+                <i class="fa fa-angle-left"></i>
+            </a>
         
 
         <a title="文章列表"><i class="fa fa-bars"></i><i class="fa fa-times"></i></a>
@@ -693,7 +701,7 @@ if __name__== &quot;__main__&quot;:
         
     </div>
 
-    <ul class="post-list"><li class="post-list-item"><a class="post-list-link" href="/2017/06/13/机器学习-2.2-监督学习之分类/">机器学习 2.1 监督学习之线性回归</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/06/10/机器学习-2.1-监督学习之线性回归/">机器学习 2.1 监督学习之线性回归</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/06/10/机器学习-1-绪论/">机器学习 1 绪论</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/05/06/MyFirstBlog/">MyFirstBlog</a></li></ul>
+    <ul class="post-list"><li class="post-list-item"><a class="post-list-link" href="/2017/07/16/机器学习-2.3-监督学习之通用线性模型/">机器学习-2.3-监督学习之通用线性模型.md</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/06/13/机器学习-2.2-监督学习之分类/">机器学习 2.1 监督学习之逻辑回归</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/06/10/机器学习-2.1-监督学习之线性回归/">机器学习 2.1 监督学习之线性回归</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/06/10/机器学习-1-绪论/">机器学习 1 绪论</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/05/06/MyFirstBlog/">MyFirstBlog</a></li></ul>
 
 
 
@@ -707,7 +715,7 @@ if __name__== &quot;__main__&quot;:
         <div id="footer-info">
             <div class="footer-left">
                 <i class="fa fa-copyright"></i> 
-                2016-2017 John Doe
+                2016-2017 zhengchenyu
             </div>
             <div class="footer-right">
                 <a href="http://hexo.io/" target="_blank" title="快速、简洁且高效的博客框架">Hexo</a>  Theme <a href="https://github.com/MOxFIVE/hexo-theme-yelee" target="_blank" title="简而不减 Hexo 双栏博客主题  v3.5">Yelee</a> by MOxFIVE <i class="fa fa-heart animated infinite pulse"></i>

@@ -15,16 +15,16 @@
 
 
 
-<meta name="description" content="机器学习的几种方法 监督学习    根据训练资料中建立一个模式，并依此模式推测新的实例。一般来讲监督学习的任务一般是分类和回归分析，往往需要人工预先准备好范例(训练资料)。  非监督学习    不同于监督学习，非监督学习仅对网络提供输入范例，会从这些范例中找到潜在类别规则，主要目的是对原始资料进行分类。  强化学习    强化学习强调如何基于环境而行动，以取得最大的预期利益。其灵感来源于心理学中的">
+<meta name="description" content="Generalized Linear Models回归分析中我们使用了高斯分布,分类问题服从伯努利分布。这两种方法都是第一个更通用的分布的特例，我们称其Generalized Linear Models (GLMs) 1 指数族分布我们定义如下形式为指数族分布： $$p(y;\eta ) = b(y)exp({\eta ^T}T(y) - a(\eta ))$$  其中,\(\eta \)是">
 <meta property="og:type" content="article">
-<meta property="og:title" content="机器学习 1 绪论">
-<meta property="og:url" content="http://yoursite.com/2017/06/10/机器学习-1-绪论/index.html">
+<meta property="og:title" content="机器学习-2.3-监督学习之通用线性模型.md">
+<meta property="og:url" content="http://yoursite.com/2017/07/16/机器学习-2.3-监督学习之通用线性模型/index.html">
 <meta property="og:site_name" content="Hexo">
-<meta property="og:description" content="机器学习的几种方法 监督学习    根据训练资料中建立一个模式，并依此模式推测新的实例。一般来讲监督学习的任务一般是分类和回归分析，往往需要人工预先准备好范例(训练资料)。  非监督学习    不同于监督学习，非监督学习仅对网络提供输入范例，会从这些范例中找到潜在类别规则，主要目的是对原始资料进行分类。  强化学习    强化学习强调如何基于环境而行动，以取得最大的预期利益。其灵感来源于心理学中的">
-<meta property="og:updated_time" content="2017-06-11T07:08:15.000Z">
+<meta property="og:description" content="Generalized Linear Models回归分析中我们使用了高斯分布,分类问题服从伯努利分布。这两种方法都是第一个更通用的分布的特例，我们称其Generalized Linear Models (GLMs) 1 指数族分布我们定义如下形式为指数族分布： $$p(y;\eta ) = b(y)exp({\eta ^T}T(y) - a(\eta ))$$  其中,\(\eta \)是">
+<meta property="og:updated_time" content="2017-07-16T08:49:33.000Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="机器学习 1 绪论">
-<meta name="twitter:description" content="机器学习的几种方法 监督学习    根据训练资料中建立一个模式，并依此模式推测新的实例。一般来讲监督学习的任务一般是分类和回归分析，往往需要人工预先准备好范例(训练资料)。  非监督学习    不同于监督学习，非监督学习仅对网络提供输入范例，会从这些范例中找到潜在类别规则，主要目的是对原始资料进行分类。  强化学习    强化学习强调如何基于环境而行动，以取得最大的预期利益。其灵感来源于心理学中的">
+<meta name="twitter:title" content="机器学习-2.3-监督学习之通用线性模型.md">
+<meta name="twitter:description" content="Generalized Linear Models回归分析中我们使用了高斯分布,分类问题服从伯努利分布。这两种方法都是第一个更通用的分布的特例，我们称其Generalized Linear Models (GLMs) 1 指数族分布我们定义如下形式为指数族分布： $$p(y;\eta ) = b(y)exp({\eta ^T}T(y) - a(\eta ))$$  其中,\(\eta \)是">
 
 <link rel="apple-touch-icon" href= "/apple-touch-icon.png">
 
@@ -56,7 +56,7 @@
 <link href="//cdn.bootcss.com/font-awesome/4.6.3/css/font-awesome.min.css" rel="stylesheet">
 
 
-<title>机器学习 1 绪论 | Hexo</title>
+<title>机器学习-2.3-监督学习之通用线性模型.md | Hexo</title>
 
 <script src="//cdn.bootcss.com/jquery/2.2.4/jquery.min.js"></script>
 <script src="//cdn.bootcss.com/clipboard.js/1.5.10/clipboard.min.js"></script>
@@ -256,11 +256,11 @@
     </div>
     <link class="menu-list" tags="标签" friends="友情链接" about="关于我"/>
 </nav>
-      <div class="body-wrap"><article id="post-机器学习-1-绪论" class="article article-type-post" itemscope itemprop="blogPost">
+      <div class="body-wrap"><article id="post-机器学习-2.3-监督学习之通用线性模型" class="article article-type-post" itemscope itemprop="blogPost">
   
     <div class="article-meta">
-      <a href="/2017/06/10/机器学习-1-绪论/" class="article-date">
-      <time datetime="2017-06-10T13:43:10.000Z" itemprop="datePublished">2017-06-10</time>
+      <a href="/2017/07/16/机器学习-2.3-监督学习之通用线性模型/" class="article-date">
+      <time datetime="2017-07-16T06:33:58.000Z" itemprop="datePublished">2017-07-16</time>
 </a>
 
 
@@ -275,7 +275,7 @@
         
   
     <h1 class="article-title" itemprop="name">
-      机器学习 1 绪论
+      机器学习-2.3-监督学习之通用线性模型.md
     </h1>
   
 
@@ -292,19 +292,39 @@
     <div class="article-entry" itemprop="articleBody">
       
           
-        <h2 id="机器学习的几种方法"><a href="#机器学习的几种方法" class="headerlink" title="机器学习的几种方法"></a>机器学习的几种方法</h2><ul>
-<li>监督学习</li>
-</ul>
-<p>  根据训练资料中建立一个模式，并依此模式推测新的实例。一般来讲监督学习的任务一般是分类和回归分析，往往需要人工预先准备好范例(训练资料)。</p>
+        <script type="text/javascript" src="/Users/zcy/Desktop/study/git/MathJax-master/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+<h1 id="Generalized-Linear-Models"><a href="#Generalized-Linear-Models" class="headerlink" title="Generalized Linear Models"></a>Generalized Linear Models</h1><p>回归分析中我们使用了高斯分布,分类问题服从伯努利分布。这两种方法都是第一个更通用的分布的特例，我们称其Generalized Linear Models (GLMs)</p>
+<h2 id="1-指数族分布"><a href="#1-指数族分布" class="headerlink" title="1 指数族分布"></a>1 指数族分布</h2><p>我们定义如下形式为指数族分布：</p>
+$$p(y;\eta ) = b(y)exp({\eta ^T}T(y) - a(\eta ))$$
+
+<p>其中,\(\eta \)是自然参数(natural parameter )，\(T(y) \)叫做充分统计量(sufficient statistic),一般\(T(y)=y\)。\(a(\eta) \)是log partition function 。\({e^{ - a\left( \eta  \right)}}\)在归整化很重要，这个参数确保\(p(y;\eta )\)归整为1。</p>
+<h2 id="2-指数族分布的特例"><a href="#2-指数族分布的特例" class="headerlink" title="2 指数族分布的特例"></a>2 指数族分布的特例</h2><p>其中伯努利分布和高斯分布都是指数族分布的一个特例。</p>
+<h3 id="2-1-伯努利分布的指数族表达"><a href="#2-1-伯努利分布的指数族表达" class="headerlink" title="2.1 伯努利分布的指数族表达"></a>2.1 伯努利分布的指数族表达</h3><p>伯努利分布的指数表示:</p>
+$$p(y,\varphi ) = {\varphi ^y}{(1 - \varphi )^{1 - y}} = \exp (y\log \frac{\varphi }{1 - \varphi } + \log (1 - \varphi ))$$
+
+<p>对照指数函数族的表达式，有\(b(y) = 1\),\(T(y) = y\),\(\eta  = \log \frac{\varphi }{1 - \varphi}\)等价于\(\varphi=\frac{e^\eta}{e^\eta + 1}\),\(a(y) = \log \frac{1}{1 - \varphi } = \log ({e^\eta } + 1)\)</p>
+<h3 id="2-2-高斯分布的指数族表达"><a href="#2-2-高斯分布的指数族表达" class="headerlink" title="2.2 高斯分布的指数族表达"></a>2.2 高斯分布的指数族表达</h3><p>高斯分布的指数表示:</p>
+$$p(y;\mu ) = \frac{1}{{\sqrt {2\pi } }}\exp ( - \frac{1}{2}{(y - \mu )^2}) = \frac{1}{{\sqrt {2\pi } }}\exp ( - \frac{1}{2}{y^2})\exp (\mu y - \frac{1}{2}{\mu ^2})$$
+
+<p>对照指数函数族的表达式，有\(b(y) = \frac{1}{\sqrt {2\pi }}\exp ( - \frac{1}{2}{y^2})\),\( \eta = \mu \),\(T(y) = y\),\(a(\eta ) = \frac{1}{2}{u^2} = \frac{1}{2}{\eta ^2}\)。</p>
+<h2 id="3-指数函数组的三个假设"><a href="#3-指数函数组的三个假设" class="headerlink" title="3 指数函数组的三个假设"></a>3 指数函数组的三个假设</h2><p>三个假设分别为:</p>
 <ul>
-<li>非监督学习</li>
+<li>\(y|x;\theta\)服从指数分布</li>
+<li>给定\(x\)的情况下，我们的目标是预测\(T(y)\)。在大多数的例子中，\(T(y)=y\),因此就意味着我们通过学习得到函数h, 使得\(h(x)=E(y|x)\), 意思就是给定x，得到函数h使得其与训练样本的数学期望相等。</li>
+<li>自然参数\(\theta\)与输入\(x\)是线性关系。</li>
 </ul>
-<p>  不同于监督学习，非监督学习仅对网络提供输入范例，会从这些范例中找到潜在类别规则，主要目的是对原始资料进行分类。</p>
-<ul>
-<li>强化学习</li>
-</ul>
-<p>  强化学习强调如何基于环境而行动，以取得最大的预期利益。其灵感来源于心理学中的行为主义理论，即有机体如何在环境给予的奖励或惩罚的刺激下，逐步形成对刺激的预期，产生能获得最大利益的习惯性行为。</p>
-<h2 id="一些规范"><a href="#一些规范" class="headerlink" title="一些规范"></a>一些规范</h2><p>  n表示样本的维度，下标。m 表示样本数目，上标。</p>
+<p>对照上面的过程，我们可知伯努利分布和高斯分布都符合这三个假设</p>
+<h2 id="4-GLMs公式推导"><a href="#4-GLMs公式推导" class="headerlink" title="4 GLMs公式推导"></a>4 GLMs公式推导</h2><p>还是之前的问题，已知有\(m\)个样本，通过学习模拟正确的\(h(x)\),使得其能够有效的推测\(y\)。(这里我们假定了\(T(y)=y\))</p>
+<p>得到最大释然函数:</p>
+$$l(\eta ) = \sum\limits_{i = 1}^m {b({y^i}){\text{ }}exp({\eta ^T}T({y^i}) - a(\eta ))} $$
+
+<p>然后为了求其最大值，我们对其取自然对数后求倒数。</p>
+$$\frac{{\partial \ln (l(\eta ))}}{{\partial \eta }} = \sum\limits _{i = 1}^m {\frac{{\partial (\ln b({y^i}) + {\eta ^T}T({y^i}) - a(\eta ))}}{{\partial \eta }}}  = \sum\limits _{i = 1}^m {(T({y^i})}  - \frac{{\partial a(\eta )}}{{\partial \eta }})$$
+
+<p>在我们之前指数族分布的定义3中，\(\eta\)是各个维度\(x\)的线性表达。有\(\eta  = {\theta ^T}x\)。所以，我们对每一个维度求偏导数，有：</p>
+$$\frac{{\partial \ln (l(\eta ))}}{{\partial {\theta _j}}} = \frac{{\partial \ln (l(\eta ))}}{{\partial \eta }}\frac{{\partial \eta }}{{\partial {\theta _j}}} = \sum\limits _{i = 1}^m {(T({y^i})}  - \frac{{\partial a(\eta )}}{{\partial \eta }})x _j^i$$
+<p>如果指数分布为伯努利分布，我们将式子带入其中，能够轻易的关于\(\theta _j\)的偏导数，且与之前推导的结果一致，具体过程不详细说了。高斯分布同理。</p>
 
       
     </div>
@@ -313,13 +333,13 @@
   
     
     <div class="copyright">
-        <p><span>本文标题:</span><a href="/2017/06/10/机器学习-1-绪论/">机器学习 1 绪论</a></p>
+        <p><span>本文标题:</span><a href="/2017/07/16/机器学习-2.3-监督学习之通用线性模型/">机器学习-2.3-监督学习之通用线性模型.md</a></p>
         <p><span>文章作者:</span><a href="/" title="回到主页">zhengchenyu</a></p>
-        <p><span>发布时间:</span>2017-06-10, 21:43:10</p>
-        <p><span>最后更新:</span>2017-06-11, 15:08:15</p>
+        <p><span>发布时间:</span>2017-07-16, 14:33:58</p>
+        <p><span>最后更新:</span>2017-07-16, 16:49:33</p>
         <p>
-            <span>原始链接:</span><a class="post-url" href="/2017/06/10/机器学习-1-绪论/" title="机器学习 1 绪论">http://yoursite.com/2017/06/10/机器学习-1-绪论/</a>
-            <span class="copy-path" data-clipboard-text="原文: http://yoursite.com/2017/06/10/机器学习-1-绪论/　　作者: zhengchenyu" title="点击复制文章链接"><i class="fa fa-clipboard"></i></span>
+            <span>原始链接:</span><a class="post-url" href="/2017/07/16/机器学习-2.3-监督学习之通用线性模型/" title="机器学习-2.3-监督学习之通用线性模型.md">http://yoursite.com/2017/07/16/机器学习-2.3-监督学习之通用线性模型/</a>
+            <span class="copy-path" data-clipboard-text="原文: http://yoursite.com/2017/07/16/机器学习-2.3-监督学习之通用线性模型/　　作者: zhengchenyu" title="点击复制文章链接"><i class="fa fa-clipboard"></i></span>
             <script> var clipboard = new Clipboard('.copy-path'); </script>
         </p>
         <p>
@@ -331,16 +351,10 @@
 
     <nav id="article-nav">
         
-            <div id="article-nav-newer" class="article-nav-title">
-                <a href="/2017/06/10/机器学习-2.1-监督学习之线性回归/">
-                    机器学习 2.1 监督学习之线性回归
-                </a>
-            </div>
-        
         
             <div id="article-nav-older" class="article-nav-title">
-                <a href="/2017/05/06/MyFirstBlog/">
-                    MyFirstBlog
+                <a href="/2017/06/13/机器学习-2.2-监督学习之分类/">
+                    机器学习 2.1 监督学习之逻辑回归
                 </a>
             </div>
         
@@ -352,7 +366,7 @@
     <div id="toc" class="toc-article">
         <strong class="toc-title">文章目录</strong>
         
-            <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#机器学习的几种方法"><span class="toc-number">1.</span> <span class="toc-text">机器学习的几种方法</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#一些规范"><span class="toc-number">2.</span> <span class="toc-text">一些规范</span></a></li></ol>
+            <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#Generalized-Linear-Models"><span class="toc-number">1.</span> <span class="toc-text">Generalized Linear Models</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#1-指数族分布"><span class="toc-number">1.1.</span> <span class="toc-text">1 指数族分布</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-指数族分布的特例"><span class="toc-number">1.2.</span> <span class="toc-text">2 指数族分布的特例</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#2-1-伯努利分布的指数族表达"><span class="toc-number">1.2.1.</span> <span class="toc-text">2.1 伯努利分布的指数族表达</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-2-高斯分布的指数族表达"><span class="toc-number">1.2.2.</span> <span class="toc-text">2.2 高斯分布的指数族表达</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-指数函数组的三个假设"><span class="toc-number">1.3.</span> <span class="toc-text">3 指数函数组的三个假设</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#4-GLMs公式推导"><span class="toc-number">1.4.</span> <span class="toc-text">4 GLMs公式推导</span></a></li></ol></li></ol>
         
     </div>
     <style>
@@ -388,7 +402,7 @@
         </div>
         <script>
             window._bd_share_config={
-                "common":{"bdSnsKey":{},"bdText":"机器学习 1 绪论　| Hexo　","bdMini":"2","bdMiniList":false,"bdPic":"","bdStyle":"0","bdSize":"24"},"share":{}};with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='http://bdimg.share.baidu.com/static/api/js/share.js?v=89860593.js?cdnversion='+~(-new Date()/36e5)];
+                "common":{"bdSnsKey":{},"bdText":"机器学习-2.3-监督学习之通用线性模型.md　| Hexo　","bdMini":"2","bdMiniList":false,"bdPic":"","bdStyle":"0","bdSize":"24"},"share":{}};with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='http://bdimg.share.baidu.com/static/api/js/share.js?v=89860593.js?cdnversion='+~(-new Date()/36e5)];
         </script>
     
 
@@ -408,15 +422,13 @@
 
     <div class="scroll" id="post-nav-button">
         
-            <a href="/2017/06/10/机器学习-2.1-监督学习之线性回归/" title="上一篇: 机器学习 2.1 监督学习之线性回归">
-                <i class="fa fa-angle-left"></i>
-            </a>
+            <a href="/" title="回到主页"><i class="fa fa-home"></i></a>
         
 
         <a title="文章列表"><i class="fa fa-bars"></i><i class="fa fa-times"></i></a>
 
         
-            <a href="/2017/05/06/MyFirstBlog/" title="下一篇: MyFirstBlog">
+            <a href="/2017/06/13/机器学习-2.2-监督学习之分类/" title="下一篇: 机器学习 2.1 监督学习之逻辑回归">
                 <i class="fa fa-angle-right"></i>
             </a>
         
