@@ -26,7 +26,7 @@
 <meta property="og:image" content="http://ord3iii9m.bkt.clouddn.com/image/github/mlearning%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0-%E6%88%BF%E4%BB%B7%E7%BA%BF%E6%80%A7%E5%9B%9E%E5%BD%92%E7%BB%93%E6%9E%9C1.png">
 <meta property="og:image" content="http://ord3iii9m.bkt.clouddn.com/image/github/mlearning%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0-%E6%88%BF%E4%BB%B7%E7%BA%BF%E6%80%A7%E5%9B%9E%E5%BD%92%E7%BB%93%E6%9E%9C2.png">
 <meta property="og:image" content="http://ord3iii9m.bkt.clouddn.com/image/github/mlearning%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0-%E5%B1%80%E9%83%A8%E5%8A%A0%E6%9D%83%E5%88%86%E6%9E%90%E7%BB%93%E6%9E%9C%E5%9B%BE.png">
-<meta property="og:updated_time" content="2017-07-15T14:20:05.000Z">
+<meta property="og:updated_time" content="2017-08-08T09:57:49.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="机器学习 2.1 监督学习之线性回归">
 <meta name="twitter:description" content="监督学习  如上图所示，监督学习实质就是: 在给定训练集合，使用某种学习算法得到学习函数h，能够较为准确的预测y。 1 线性回归下面有一组房价关于房子面积以及卧室数目的样本数据。试着从这些样本数据中构造线性模型，以预测房价。    房间数目 房间大小 房价     2 88.0 1760288   2 88.0 1762136   … … …    1.1 梯度下降法1.1.1 梯度下降法说明">
@@ -342,7 +342,7 @@ $${h_\theta }(x) = {\theta _0}{x _0} + {\theta _1}{x _1} + {\theta _2}{x _2} = \
 $$J(\theta ) = \frac{1}{2}\sum\limits _{i = 0}^m {{{({h _\theta }({x^i}) - {y^i})}^2}} $$
 
 <p>我们只要保证上面的公式趋于0就是合适的，因此这个问题就转化为得到合适的使得\(J(\theta )\)最小。实际也就转化为利用最小二乘法进行回归分析。</p>
-<p>做这样一个想想，对于二维的情况。\(J(\theta )\)是一个关于的二维函数的话，他一定类似于锅状的凸函数。根据梯度下降算法(参考&lt;&lt;最优化方法&gt;&gt;)，沿着某一个方向的负梯度方向就是在该方向上下降最大的方向。因此，我们可以选取各个维度的负梯度作为下降的方向，为了方便各个梯度方向选取同样的步长(尽管选取该方案不是梯度下降最快的方案，由于函数的连续性，该方向与最优方向一定非常接近)。因此，我们对任意维度采用如下公式进行递归(为步长)：</p>
+<p>做这样一个想想，对于二维的情况。\(J(\theta )\)是一个关于的二维函数的话，他一定类似于锅状的凸函数。根据梯度下降算法(参考&lt;&lt;最优化方法&gt;&gt;)，沿着某一个方向的负梯度方向就是在该方向上下降最大的方向。因此，我们可以选取各个维度的负梯度作为下降的方向，为了方便各个梯度方向选取同样的步长。因此，我们对任意维度采用如下公式进行递归(为步长)：</p>
 
 $${\theta _j}: = {\theta _j} - \alpha \frac{{\partial J(\theta )}}{{\partial {\theta _j}}} = {\theta _j} - \alpha \sum\limits _{i = 0}^m{({h _\theta }({x^i}) - {y^i}) {x _j}}$$
 
@@ -430,7 +430,7 @@ $${\omega ^i} = {e^{ - \frac{{{{({x^i} - 20)}^2}}}{{2{\tau ^2}}}}}$$
         <p><span>本文标题:</span><a href="/2017/06/10/机器学习-2.1-监督学习之线性回归/">机器学习 2.1 监督学习之线性回归</a></p>
         <p><span>文章作者:</span><a href="/" title="回到主页">zhengchenyu</a></p>
         <p><span>发布时间:</span>2017-06-10, 21:52:17</p>
-        <p><span>最后更新:</span>2017-07-15, 22:20:05</p>
+        <p><span>最后更新:</span>2017-08-08, 17:57:49</p>
         <p>
             <span>原始链接:</span><a class="post-url" href="/2017/06/10/机器学习-2.1-监督学习之线性回归/" title="机器学习 2.1 监督学习之线性回归">http://yoursite.com/2017/06/10/机器学习-2.1-监督学习之线性回归/</a>
             <span class="copy-path" data-clipboard-text="原文: http://yoursite.com/2017/06/10/机器学习-2.1-监督学习之线性回归/　　作者: zhengchenyu" title="点击复制文章链接"><i class="fa fa-clipboard"></i></span>
@@ -536,7 +536,7 @@ $${\omega ^i} = {e^{ - \frac{{{{({x^i} - 20)}^2}}}{{2{\tau ^2}}}}}$$
         
     </div>
 
-    <ul class="post-list"><li class="post-list-item"><a class="post-list-link" href="/2017/08/05/机器学习-2-6-监督学习之朴素贝叶斯算法/">机器学习-2.6-监督学习之朴素贝叶斯算法</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/08/05/机器学习-2-5-监督学习之生成型学习算法/">机器学习-2.5-监督学习之生成型学习算法</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/07/24/机器学习-2-4-监督学习之softmax/">机器学习-2.4-监督学习之softmax</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/07/16/机器学习-2.3-监督学习之通用线性模型/">机器学习-2.3-监督学习之通用线性模型</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/06/13/机器学习-2.2-监督学习之分类/">机器学习 2.2 监督学习之逻辑回归</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/06/10/机器学习-2.1-监督学习之线性回归/">机器学习 2.1 监督学习之线性回归</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/06/10/机器学习-1-绪论/">机器学习 1 绪论</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/05/06/MyFirstBlog/">MyFirstBlog</a></li></ul>
+    <ul class="post-list"><li class="post-list-item"><a class="post-list-link" href="/2017/09/08/机器学习-2-7-监督学习之支持向量机/">机器学习-2.7-监督学习之支持向量机</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/08/05/机器学习-2-6-监督学习之朴素贝叶斯算法/">机器学习-2.6-监督学习之朴素贝叶斯算法</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/08/05/机器学习-2-5-监督学习之生成型学习算法/">机器学习-2.5-监督学习之生成型学习算法</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/07/24/机器学习-2-4-监督学习之softmax/">机器学习-2.4-监督学习之softmax</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/07/16/机器学习-2.3-监督学习之通用线性模型/">机器学习-2.3-监督学习之通用线性模型</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/06/13/机器学习-2.2-监督学习之分类/">机器学习 2.2 监督学习之逻辑回归</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/06/10/机器学习-2.1-监督学习之线性回归/">机器学习 2.1 监督学习之线性回归</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/06/10/机器学习-1-绪论/">机器学习 1 绪论</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/05/06/MyFirstBlog/">MyFirstBlog</a></li></ul>
 
 
 
