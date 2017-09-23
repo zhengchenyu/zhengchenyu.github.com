@@ -21,7 +21,7 @@
 <meta property="og:url" content="http://yoursite.com/2017/08/05/机器学习-2-6-监督学习之朴素贝叶斯算法/index.html">
 <meta property="og:site_name" content="Hexo">
 <meta property="og:description" content="朴素贝叶斯算法1 朴素贝叶斯算法1.1 垃圾邮件处理模型以预测垃圾邮件为例子，介绍贝叶斯算法。词库中有5000个单词。我们有输入\(x\)，\(x \in {\{ 0,1\} ^{50000}}\)，是一个50000维的向量，其中\(x _i\)表示词库中第\(i\)个单次在该邮件中出现，为\(0\)表示词库中第\(i\)个单次在该邮件中没有出现。 已经邮件是否为邮件,样本\(({x _1},">
-<meta property="og:updated_time" content="2017-08-05T14:16:34.000Z">
+<meta property="og:updated_time" content="2017-09-23T08:36:54.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="机器学习-2.6-监督学习之朴素贝叶斯算法">
 <meta name="twitter:description" content="朴素贝叶斯算法1 朴素贝叶斯算法1.1 垃圾邮件处理模型以预测垃圾邮件为例子，介绍贝叶斯算法。词库中有5000个单词。我们有输入\(x\)，\(x \in {\{ 0,1\} ^{50000}}\)，是一个50000维的向量，其中\(x _i\)表示词库中第\(i\)个单次在该邮件中出现，为\(0\)表示词库中第\(i\)个单次在该邮件中没有出现。 已经邮件是否为邮件,样本\(({x _1},">
@@ -302,7 +302,16 @@
 
 $$p({x _1},{x _2},...,{x _i}|y) = p({x _1}|y)p({x _2}|y)...p({x _{50000}}|y) = \prod\limits _{i = 1}^{50000} {p({x _i}|y)}$$
 
-<h3 id="1-2-公式推导"><a href="#1-2-公式推导" class="headerlink" title="1.2 公式推导"></a>1.2 公式推导</h3><p>我们做如下设置:</p>
+<h3 id="1-2-公式推导"><a href="#1-2-公式推导" class="headerlink" title="1.2 公式推导"></a>1.2 公式推导</h3><p>关于最大释然函数如何设置，我们需要知道我们的目标是找到参数\(\theta\)，使得训练时候在给定\(x\)的情况下，得到最准确\(y\)的概率最大，最大释然函数就是这些概率的连乘，具体是需要保证下面的式子最大:</p>
+
+$$\ln \prod\limits _{i = 1}^m {p(y = {y^i}|x = {x^i};\theta )p(x = {x^i})} $$
+
+<p>在很多教材中都介绍最大释然函数是如下的表达，实际上是一样的。</p>
+$$\ln \prod\limits _{i = 1}^m {p(y = {y^i},x = {x^i};\theta )} $$
+<blockquote>
+<p>后面为了简写后面省略了\(\theta\)。</p>
+</blockquote>
+<p>我们做如下设置:</p>
 
 $${\phi _y} = p(y = 1)$$
 $${\phi _{i|y = 1}} = p({x _i} = 1|y = 1)$$
@@ -310,7 +319,7 @@ $${\phi _{i|y = 0}} = p({x _i} = 1|y = 0)$$
 
 <p>然后得到最大释然函数:</p>
 
-$$\ell ({\phi _y},{\phi _{i|y = 1}},{\phi _{i|y = 0}}) = \ln \prod\limits _{i = 1}^m {p({y^i}|{x^i})}  = \ln \prod\limits _{i = 1}^m {p({x^i}|{y^i})p({y^i})}$$
+$$\ell ({\phi _y},{\phi _{i|y = 1}},{\phi _{i|y = 0}}) = \ln \prod\limits _{i = 1}^m {p(y = {y^i},x = {x^i})}  = \ln \prod\limits _{i = 1}^m {p({x^i}|{y^i})p({y^i})}$$
 $$\ell ({\phi _y},{\phi _{i|y = 1}},{\phi _{i|y = 0}}) = \ln \prod\limits _{i = 1}^m {[[1\{ {y^i} = 1\} \ln ((\prod\limits _{j = 1}^n {p(x _j^i|{y^i})p({y^i} = 1)} ){\phi _y})][1\{ {y^i} = 1\} \ln ((\prod\limits _{j = 1}^n {p(x _j^i|{y^i})p({y^i} = 0)} )(1 - {\phi _y}))]} ]$$
 $$\ell ({\phi _y},{\phi _{i|y = 1}},{\phi _{i|y = 0}}) = \sum\limits _{i = 1}^m {[[1\{ {y^i} = 1\} (\ln {\phi _y} + \ln \prod\limits _{j = 1}^n {({{({\phi _{j|y = 1}})}^{1\{ {x _j} = 1\} }}{{(1 - {\phi _{j|y = 1}})}^{1\{ {x _j} = 0\} }})} )][1\{ {y^i} = 0\} (\ln (1 - {\phi _y}) + \ln \prod\limits _{j = 1}^n {({{({\phi _{j|y = 0}})}^{1\{ {x _j} = 1\} }}{{(1 - {\phi _{j|y = 0}})}^{1\{ {x _j} = 0\} }})} )]]}$$
 $$\ell ({\phi _y},{\phi _{i|y = 1}},{\phi _{i|y = 0}}) = \sum\limits  _{i = 1}^m {[[1\{ {y^i} = 1\} (\ln {\phi _y} + \sum\limits _{j = 1}^n {(1\{ x _j^i = 1\} \ln {\phi _{j|y = 1}} + 1\{ x _j^i = 0\} \ln (1 - {\phi _{j|y = 1}}))} )][1\{ {y^i} = 0\} (\ln (1 - {\phi _y}) + \sum\limits _{j = 1}^n {(1\{ x _j^i = 1\} \ln {\phi _{j|y = 0}} + 1\{ x _j^i = 0\} \ln (1 - {\phi _{j|y = 0}}))} )]]}$$
@@ -386,7 +395,7 @@ $${\phi _{i = k|y = 0}} = \frac{{\sum\limits _{i = 1}^m {\sum\limits _{j = 1}^n 
         <p><span>本文标题:</span><a href="/2017/08/05/机器学习-2-6-监督学习之朴素贝叶斯算法/">机器学习-2.6-监督学习之朴素贝叶斯算法</a></p>
         <p><span>文章作者:</span><a href="/" title="回到主页">zhengchenyu</a></p>
         <p><span>发布时间:</span>2017-08-05, 21:11:31</p>
-        <p><span>最后更新:</span>2017-08-05, 22:16:34</p>
+        <p><span>最后更新:</span>2017-09-23, 16:36:54</p>
         <p>
             <span>原始链接:</span><a class="post-url" href="/2017/08/05/机器学习-2-6-监督学习之朴素贝叶斯算法/" title="机器学习-2.6-监督学习之朴素贝叶斯算法">http://yoursite.com/2017/08/05/机器学习-2-6-监督学习之朴素贝叶斯算法/</a>
             <span class="copy-path" data-clipboard-text="原文: http://yoursite.com/2017/08/05/机器学习-2-6-监督学习之朴素贝叶斯算法/　　作者: zhengchenyu" title="点击复制文章链接"><i class="fa fa-clipboard"></i></span>

@@ -550,7 +550,16 @@ $$\sum\limits _{i = 3}^m {\alpha _i^{new}{y^{(i)}}k(1,i)}  = \sum\limits _{i = 3
 
 $$p({x _1},{x _2},...,{x _i}|y) = p({x _1}|y)p({x _2}|y)...p({x _{50000}}|y) = \prod\limits _{i = 1}^{50000} {p({x _i}|y)}$$
 
-<h3 id="1-2-公式推导"><a href="#1-2-公式推导" class="headerlink" title="1.2 公式推导"></a>1.2 公式推导</h3><p>我们做如下设置:</p>
+<h3 id="1-2-公式推导"><a href="#1-2-公式推导" class="headerlink" title="1.2 公式推导"></a>1.2 公式推导</h3><p>关于最大释然函数如何设置，我们需要知道我们的目标是找到参数\(\theta\)，使得训练时候在给定\(x\)的情况下，得到最准确\(y\)的概率最大，最大释然函数就是这些概率的连乘，具体是需要保证下面的式子最大:</p>
+
+$$\ln \prod\limits _{i = 1}^m {p(y = {y^i}|x = {x^i};\theta )p(x = {x^i})} $$
+
+<p>在很多教材中都介绍最大释然函数是如下的表达，实际上是一样的。</p>
+$$\ln \prod\limits _{i = 1}^m {p(y = {y^i},x = {x^i};\theta )} $$
+<blockquote>
+<p>后面为了简写后面省略了\(\theta\)。</p>
+</blockquote>
+<p>我们做如下设置:</p>
 
 $${\phi _y} = p(y = 1)$$
 $${\phi _{i|y = 1}} = p({x _i} = 1|y = 1)$$
@@ -558,7 +567,7 @@ $${\phi _{i|y = 0}} = p({x _i} = 1|y = 0)$$
 
 <p>然后得到最大释然函数:</p>
 
-$$\ell ({\phi _y},{\phi _{i|y = 1}},{\phi _{i|y = 0}}) = \ln \prod\limits _{i = 1}^m {p({y^i}|{x^i})}  = \ln \prod\limits _{i = 1}^m {p({x^i}|{y^i})p({y^i})}$$
+$$\ell ({\phi _y},{\phi _{i|y = 1}},{\phi _{i|y = 0}}) = \ln \prod\limits _{i = 1}^m {p(y = {y^i},x = {x^i})}  = \ln \prod\limits _{i = 1}^m {p({x^i}|{y^i})p({y^i})}$$
 $$\ell ({\phi _y},{\phi _{i|y = 1}},{\phi _{i|y = 0}}) = \ln \prod\limits _{i = 1}^m {[[1\{ {y^i} = 1\} \ln ((\prod\limits _{j = 1}^n {p(x _j^i|{y^i})p({y^i} = 1)} ){\phi _y})][1\{ {y^i} = 1\} \ln ((\prod\limits _{j = 1}^n {p(x _j^i|{y^i})p({y^i} = 0)} )(1 - {\phi _y}))]} ]$$
 $$\ell ({\phi _y},{\phi _{i|y = 1}},{\phi _{i|y = 0}}) = \sum\limits _{i = 1}^m {[[1\{ {y^i} = 1\} (\ln {\phi _y} + \ln \prod\limits _{j = 1}^n {({{({\phi _{j|y = 1}})}^{1\{ {x _j} = 1\} }}{{(1 - {\phi _{j|y = 1}})}^{1\{ {x _j} = 0\} }})} )][1\{ {y^i} = 0\} (\ln (1 - {\phi _y}) + \ln \prod\limits _{j = 1}^n {({{({\phi _{j|y = 0}})}^{1\{ {x _j} = 1\} }}{{(1 - {\phi _{j|y = 0}})}^{1\{ {x _j} = 0\} }})} )]]}$$
 $$\ell ({\phi _y},{\phi _{i|y = 1}},{\phi _{i|y = 0}}) = \sum\limits  _{i = 1}^m {[[1\{ {y^i} = 1\} (\ln {\phi _y} + \sum\limits _{j = 1}^n {(1\{ x _j^i = 1\} \ln {\phi _{j|y = 1}} + 1\{ x _j^i = 0\} \ln (1 - {\phi _{j|y = 1}}))} )][1\{ {y^i} = 0\} (\ln (1 - {\phi _y}) + \sum\limits _{j = 1}^n {(1\{ x _j^i = 1\} \ln {\phi _{j|y = 0}} + 1\{ x _j^i = 0\} \ln (1 - {\phi _{j|y = 0}}))} )]]}$$
