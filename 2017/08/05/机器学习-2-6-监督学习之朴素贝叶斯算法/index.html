@@ -21,7 +21,7 @@
 <meta property="og:url" content="http://yoursite.com/2017/08/05/机器学习-2-6-监督学习之朴素贝叶斯算法/index.html">
 <meta property="og:site_name" content="Hexo">
 <meta property="og:description" content="朴素贝叶斯算法1 朴素贝叶斯算法1.1 垃圾邮件处理模型以预测垃圾邮件为例子，介绍贝叶斯算法。词库中有5000个单词。我们有输入\(x\)，\(x \in {\{ 0,1\} ^{50000}}\)，是一个50000维的向量，其中\(x _i\)表示词库中第\(i\)个单次在该邮件中出现，为\(0\)表示词库中第\(i\)个单次在该邮件中没有出现。 已经邮件是否为邮件,样本\(({x _1},">
-<meta property="og:updated_time" content="2017-09-23T08:36:54.000Z">
+<meta property="og:updated_time" content="2017-09-23T12:35:46.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="机器学习-2.6-监督学习之朴素贝叶斯算法">
 <meta name="twitter:description" content="朴素贝叶斯算法1 朴素贝叶斯算法1.1 垃圾邮件处理模型以预测垃圾邮件为例子，介绍贝叶斯算法。词库中有5000个单词。我们有输入\(x\)，\(x \in {\{ 0,1\} ^{50000}}\)，是一个50000维的向量，其中\(x _i\)表示词库中第\(i\)个单次在该邮件中出现，为\(0\)表示词库中第\(i\)个单次在该邮件中没有出现。 已经邮件是否为邮件,样本\(({x _1},">
@@ -136,13 +136,13 @@
                 <div class="tips-box hide">
                     <div class="tips-arrow"></div>
                     <ul class="tips-inner">
-                        <li>菜单</li>
-                        <li>标签</li>
+                        <li>Menu</li>
+                        <li>Tags</li>
                         
-                        <li>友情链接</li>
+                        <li>Friends</li>
                         
                         
-                        <li>关于我</li>
+                        <li>About Me</li>
                         
                     </ul>
                 </div>
@@ -254,7 +254,7 @@
             </nav>
         </header>                
     </div>
-    <link class="menu-list" tags="标签" friends="友情链接" about="关于我"/>
+    <link class="menu-list" tags="Tags" friends="Friends" about="About Me"/>
 </nav>
       <div class="body-wrap"><article id="post-机器学习-2-6-监督学习之朴素贝叶斯算法" class="article article-type-post" itemscope itemprop="blogPost">
   
@@ -306,7 +306,7 @@ $$p({x _1},{x _2},...,{x _i}|y) = p({x _1}|y)p({x _2}|y)...p({x _{50000}}|y) = \
 
 $$\ln \prod\limits _{i = 1}^m {p(y = {y^i}|x = {x^i};\theta )p(x = {x^i})} $$
 
-<p>在很多教材中都介绍最大释然函数是如下的表达，实际上是一样的。</p>
+<p>在很多教材中都介绍最大释然函数是如下的表达，实际上是一样的。下面的式子的直接意义是在\(\theta\)已知情况下，出现\((x^i,y^i)\)的概率，实际上面的分析过程是一样的。</p>
 $$\ln \prod\limits _{i = 1}^m {p(y = {y^i},x = {x^i};\theta )} $$
 <blockquote>
 <p>后面为了简写后面省略了\(\theta\)。</p>
@@ -392,17 +392,17 @@ $${\phi _{i = k|y = 0}} = \frac{{\sum\limits _{i = 1}^m {\sum\limits _{j = 1}^n 
   
     
     <div class="copyright">
-        <p><span>本文标题:</span><a href="/2017/08/05/机器学习-2-6-监督学习之朴素贝叶斯算法/">机器学习-2.6-监督学习之朴素贝叶斯算法</a></p>
-        <p><span>文章作者:</span><a href="/" title="回到主页">zhengchenyu</a></p>
-        <p><span>发布时间:</span>2017-08-05, 21:11:31</p>
-        <p><span>最后更新:</span>2017-09-23, 16:36:54</p>
+        <p><span>Title:</span><a href="/2017/08/05/机器学习-2-6-监督学习之朴素贝叶斯算法/">机器学习-2.6-监督学习之朴素贝叶斯算法</a></p>
+        <p><span>Author:</span><a href="/" title="Back to Homepage">zhengchenyu</a></p>
+        <p><span>Created:</span>2017-08-05, 21:11:31</p>
+        <p><span>Updated:</span>2017-09-23, 20:35:46</p>
         <p>
-            <span>原始链接:</span><a class="post-url" href="/2017/08/05/机器学习-2-6-监督学习之朴素贝叶斯算法/" title="机器学习-2.6-监督学习之朴素贝叶斯算法">http://yoursite.com/2017/08/05/机器学习-2-6-监督学习之朴素贝叶斯算法/</a>
-            <span class="copy-path" data-clipboard-text="原文: http://yoursite.com/2017/08/05/机器学习-2-6-监督学习之朴素贝叶斯算法/　　作者: zhengchenyu" title="点击复制文章链接"><i class="fa fa-clipboard"></i></span>
+            <span>Full URL:</span><a class="post-url" href="/2017/08/05/机器学习-2-6-监督学习之朴素贝叶斯算法/" title="机器学习-2.6-监督学习之朴素贝叶斯算法">http://yoursite.com/2017/08/05/机器学习-2-6-监督学习之朴素贝叶斯算法/</a>
+            <span class="copy-path" data-clipboard-text="From http://yoursite.com/2017/08/05/机器学习-2-6-监督学习之朴素贝叶斯算法/　　By zhengchenyu" title="Copy Article&#39;s Link &amp; Author"><i class="fa fa-clipboard"></i></span>
             <script> var clipboard = new Clipboard('.copy-path'); </script>
         </p>
         <p>
-            <span>许可协议:</span><i class="fa fa-creative-commons"></i> <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/" title="CC BY-NC-SA 4.0 International" target = "_blank">"署名-非商用-相同方式共享 4.0"</a> 转载请保留原文链接及作者。
+            <span>License:</span><i class="fa fa-creative-commons"></i> <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/" title="CC BY-NC-SA 4.0 International" target = "_blank">"CC BY-NC-SA 4.0"</a> Keep Link &amp; Author if Distribute.
         </p>
     </div>
 
@@ -429,7 +429,7 @@ $${\phi _{i = k|y = 0}} = \frac{{\sum\limits _{i = 1}^m {\sum\limits _{j = 1}^n 
 </article>
 
     <div id="toc" class="toc-article">
-        <strong class="toc-title">文章目录</strong>
+        <strong class="toc-title">Contents</strong>
         
             <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#朴素贝叶斯算法"><span class="toc-number">1.</span> <span class="toc-text">朴素贝叶斯算法</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#1-朴素贝叶斯算法"><span class="toc-number">1.1.</span> <span class="toc-text">1 朴素贝叶斯算法</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#1-1-垃圾邮件处理模型"><span class="toc-number">1.1.1.</span> <span class="toc-text">1.1 垃圾邮件处理模型</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-2-公式推导"><span class="toc-number">1.1.2.</span> <span class="toc-text">1.2 公式推导</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-3-算法实现"><span class="toc-number">1.1.3.</span> <span class="toc-text">1.3 算法实现</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-多元伯努利事件模型"><span class="toc-number">1.2.</span> <span class="toc-text">2 多元伯努利事件模型</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#2-1-公式推导"><span class="toc-number">1.2.1.</span> <span class="toc-text">2.1 公式推导</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-2-算法的实现"><span class="toc-number">1.2.2.</span> <span class="toc-text">2.2 算法的实现</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#附录"><span class="toc-number">1.3.</span> <span class="toc-text">附录</span></a></li></ol></li></ol>
         
@@ -445,10 +445,10 @@ $${\phi _{i = k|y = 0}} = \frac{{\sum\limits _{i = 1}^m {\sum\limits _{j = 1}^n 
         }
     </style>
 
-    <input type="button" id="tocButton" value="隐藏目录"  title="点击按钮隐藏或者显示文章目录">
+    <input type="button" id="tocButton" value="Hide"  title="Show or Hide Table of Contents">
 
     <script>
-        yiliaConfig.toc = ["隐藏目录", "显示目录", !!"false"];
+        yiliaConfig.toc = ["Hide", "Show", !!"false"];
     </script>
 
 
@@ -487,15 +487,15 @@ $${\phi _{i = k|y = 0}} = \frac{{\sum\limits _{i = 1}^m {\sum\limits _{j = 1}^n 
 
     <div class="scroll" id="post-nav-button">
         
-            <a href="/2017/09/08/机器学习-2-7-监督学习之支持向量机/" title="上一篇: 机器学习-2.7-监督学习之支持向量机">
+            <a href="/2017/09/08/机器学习-2-7-监督学习之支持向量机/" title="Pre: 机器学习-2.7-监督学习之支持向量机">
                 <i class="fa fa-angle-left"></i>
             </a>
         
 
-        <a title="文章列表"><i class="fa fa-bars"></i><i class="fa fa-times"></i></a>
+        <a title="Mini Archives"><i class="fa fa-bars"></i><i class="fa fa-times"></i></a>
 
         
-            <a href="/2017/08/05/机器学习-2-5-监督学习之生成型学习算法/" title="下一篇: 机器学习-2.5-监督学习之生成型学习算法">
+            <a href="/2017/08/05/机器学习-2-5-监督学习之生成型学习算法/" title="Next: 机器学习-2.5-监督学习之生成型学习算法">
                 <i class="fa fa-angle-right"></i>
             </a>
         
@@ -518,14 +518,14 @@ $${\phi _{i = k|y = 0}} = \frac{{\sum\limits _{i = 1}^m {\sum\limits _{j = 1}^n 
                 2016-2017 zhengchenyu
             </div>
             <div class="footer-right">
-                <a href="http://hexo.io/" target="_blank" title="快速、简洁且高效的博客框架">Hexo</a>  Theme <a href="https://github.com/MOxFIVE/hexo-theme-yelee" target="_blank" title="简而不减 Hexo 双栏博客主题  v3.5">Yelee</a> by MOxFIVE <i class="fa fa-heart animated infinite pulse"></i>
+                <a href="http://hexo.io/" target="_blank" title="A fast, simple &amp; powerful blog framework">Hexo</a>  Theme <a href="https://github.com/MOxFIVE/hexo-theme-yelee" target="_blank" title="Another simple and elegant theme for Hexo  v3.5">Yelee</a> by MOxFIVE <i class="fa fa-heart animated infinite pulse"></i>
             </div>
         </div>
         
             <div class="visit">
                 
                     <span id="busuanzi_container_site_pv" style='display:none'>
-                        <span id="site-visit" title="本站到访数"><i class="fa fa-user" aria-hidden="true"></i><span id="busuanzi_value_site_uv"></span>
+                        <span id="site-visit" title="Site Visitors"><i class="fa fa-user" aria-hidden="true"></i><span id="busuanzi_value_site_uv"></span>
                         </span>
                     </span>
                 
@@ -534,7 +534,7 @@ $${\phi _{i = k|y = 0}} = \frac{{\sum\limits _{i = 1}^m {\sum\limits _{j = 1}^n 
                 
                 
                     <span id="busuanzi_container_page_pv" style='display:none'>
-                        <span id="page-visit"  title="本页阅读量"><i class="fa fa-eye animated infinite pulse" aria-hidden="true"></i><span id="busuanzi_value_page_pv"></span>
+                        <span id="page-visit"  title="Page Hits"><i class="fa fa-eye animated infinite pulse" aria-hidden="true"></i><span id="busuanzi_value_page_pv"></span>
                         </span>
                     </span>
                 
@@ -567,9 +567,9 @@ $${\phi _{i = k|y = 0}} = \frac{{\sum\limits _{i = 1}^m {\sum\limits _{j = 1}^n 
 
 
 <div class="scroll" id="scroll">
-    <a href="#" title="返回顶部"><i class="fa fa-arrow-up"></i></a>
-    <a href="#comments" onclick="load$hide();" title="查看评论"><i class="fa fa-comments-o"></i></a>
-    <a href="#footer" title="转到底部"><i class="fa fa-arrow-down"></i></a>
+    <a href="#" title="Back to Top"><i class="fa fa-arrow-up"></i></a>
+    <a href="#comments" onclick="load$hide();" title="Comments"><i class="fa fa-comments-o"></i></a>
+    <a href="#footer" title="Go to Bottom"><i class="fa fa-arrow-down"></i></a>
 </div>
 <script>
     // Open in New Window
