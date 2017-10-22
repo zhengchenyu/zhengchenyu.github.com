@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html >
+<head>
+
+    <!-- hexo-inject:begin --><!-- hexo-inject:end --><!--[if lt IE 9]>
+        <style>body {display: none; background: none !important} </style>
+        <meta http-equiv="Refresh" Content="0; url=//outdatedbrowser.com/" />
+    <![endif]-->
+
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="format-detection" content="telephone=no" />
+<meta name="author" content="zhengchenyu" />
+
+
+
+<meta name="description" content="主成分分析(PCA) 严格上说PCA应该算是一种降低维度的方法，这里暂时归类为非监督学习中。  1 PCA理论简述PCA的主要思路是将\(n\)维数据降维到\(k\)维子空间中，以滤除不需要的噪声或没有意义的特征信息。譬如我们有汽车的一组运行数据，包括专项半径、速度等。其中就一个用英里/每小时和千米/每小时描述的速度，很明显两者是呈线性关系的，只是因为舍入带来一些误差，对于这样的问题我们完全可">
+<meta property="og:type" content="article">
+<meta property="og:title" content="机器学习-3.2-非监督学习之主成分分析.md">
+<meta property="og:url" content="http://yoursite.com/2017/10/22/机器学习-3-2-非监督学习之主成分分析/index.html">
+<meta property="og:site_name" content="Hexo">
+<meta property="og:description" content="主成分分析(PCA) 严格上说PCA应该算是一种降低维度的方法，这里暂时归类为非监督学习中。  1 PCA理论简述PCA的主要思路是将\(n\)维数据降维到\(k\)维子空间中，以滤除不需要的噪声或没有意义的特征信息。譬如我们有汽车的一组运行数据，包括专项半径、速度等。其中就一个用英里/每小时和千米/每小时描述的速度，很明显两者是呈线性关系的，只是因为舍入带来一些误差，对于这样的问题我们完全可">
+<meta property="og:image" content="http://yoursite.com/images/机器学习/PCA驾驶员技能兴趣关系曲线.png">
+<meta property="og:image" content="http://yoursite.com/images/机器学习/PCA降维示例.png">
+<meta property="og:image" content="http://yoursite.com/images/机器学习/PCA手写数字三维展示图.png">
+<meta property="og:updated_time" content="2017-10-22T08:44:06.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="机器学习-3.2-非监督学习之主成分分析.md">
+<meta name="twitter:description" content="主成分分析(PCA) 严格上说PCA应该算是一种降低维度的方法，这里暂时归类为非监督学习中。  1 PCA理论简述PCA的主要思路是将\(n\)维数据降维到\(k\)维子空间中，以滤除不需要的噪声或没有意义的特征信息。譬如我们有汽车的一组运行数据，包括专项半径、速度等。其中就一个用英里/每小时和千米/每小时描述的速度，很明显两者是呈线性关系的，只是因为舍入带来一些误差，对于这样的问题我们完全可">
+<meta name="twitter:image" content="http://yoursite.com/images/机器学习/PCA驾驶员技能兴趣关系曲线.png">
+
+<link rel="apple-touch-icon" href= "/apple-touch-icon.png">
+
+
+    <link rel="alternate" href="/atom.xml" title="Hexo" type="application/atom+xml">
+
+
+
+    <link rel="shortcut icon" href="/favicon.png">
+
+
+
+    <link href="//cdn.bootcss.com/animate.css/3.5.1/animate.min.css" rel="stylesheet">
+
+
+
+    <link href="//cdn.bootcss.com/fancybox/2.1.5/jquery.fancybox.min.css" rel="stylesheet">
+
+
+
+    <script src="//cdn.bootcss.com/pace/1.0.2/pace.min.js"></script>
+    <link href="//cdn.bootcss.com/pace/1.0.2/themes/blue/pace-theme-minimal.css" rel="stylesheet">
+
+
+<link rel="stylesheet" href="/css/style.css">
+
+
+
+<link href="//cdn.bootcss.com/font-awesome/4.6.3/css/font-awesome.min.css" rel="stylesheet">
+
+
+<title>机器学习-3.2-非监督学习之主成分分析.md | Hexo</title>
+
+<script src="//cdn.bootcss.com/jquery/2.2.4/jquery.min.js"></script>
+<script src="//cdn.bootcss.com/clipboard.js/1.5.10/clipboard.min.js"></script>
+
+<script>
+    var yiliaConfig = {
+        fancybox: true,
+        animate: true,
+        isHome: false,
+        isPost: true,
+        isArchive: false,
+        isTag: false,
+        isCategory: false,
+        fancybox_js: "//cdn.bootcss.com/fancybox/2.1.5/jquery.fancybox.min.js",
+        scrollreveal: "//cdn.bootcss.com/scrollReveal.js/3.1.4/scrollreveal.min.js",
+        search: undefined
+    }
+</script>
+
+
+    <script> yiliaConfig.jquery_ui = [false]; </script>
+
+
+
+    <script> yiliaConfig.rootUrl = "\/";</script><!-- hexo-inject:begin --><!-- hexo-inject:end -->
+
+
+
+
+
+
+</head>
+<body>
+  <!-- hexo-inject:begin --><!-- hexo-inject:end --><div id="container">
+    <div class="left-col">
+    <div class="overlay"></div>
+<div class="intrude-less">
+    <header id="header" class="inner">
+        <a href="/" class="profilepic">
+            <img src="/img/avatar.png" class="animated zoomIn">
+        </a>
+        <hgroup>
+          <h1 class="header-author"><a href="/">zhengchenyu</a></h1>
+        </hgroup>
+
+        
+
+        
+
+
+        
+            <div id="switch-btn" class="switch-btn">
+                <div class="icon">
+                    <div class="icon-ctn">
+                        <div class="icon-wrap icon-house" data-idx="0">
+                            <div class="birdhouse"></div>
+                            <div class="birdhouse_holes"></div>
+                        </div>
+                        <div class="icon-wrap icon-ribbon hide" data-idx="1">
+                            <div class="ribbon"></div>
+                        </div>
+                        
+                        <div class="icon-wrap icon-link hide" data-idx="2">
+                            <div class="loopback_l"></div>
+                            <div class="loopback_r"></div>
+                        </div>
+                        
+                        
+                        <div class="icon-wrap icon-me hide" data-idx="3">
+                            <div class="user"></div>
+                            <div class="shoulder"></div>
+                        </div>
+                        
+                    </div>
+                    
+                </div>
+                <div class="tips-box hide">
+                    <div class="tips-arrow"></div>
+                    <ul class="tips-inner">
+                        <li>菜单</li>
+                        <li>标签</li>
+                        
+                        <li>友情链接</li>
+                        
+                        
+                        <li>关于我</li>
+                        
+                    </ul>
+                </div>
+            </div>
+        
+
+        <div id="switch-area" class="switch-area">
+            <div class="switch-wrap">
+                <section class="switch-part switch-part1">
+                    <nav class="header-menu">
+                        <ul>
+                        
+                            <li><a href="/">主页</a></li>
+                        
+                            <li><a href="/archives/">所有文章</a></li>
+                        
+                            <li><a href="/tags/">标签云</a></li>
+                        
+                            <li><a href="/about/">关于我</a></li>
+                        
+                        </ul>
+                    </nav>
+                    <nav class="header-nav">
+                        <ul class="social">
+                            
+                                <a class="fa Email" href="mailto:123@123.com" title="Email"></a>
+                            
+                                <a class="fa GitHub" href="#" title="GitHub"></a>
+                            
+                                <a class="fa RSS" href="/atom.xml" title="RSS"></a>
+                            
+                        </ul>
+                    </nav>
+                </section>
+                
+                
+                <section class="switch-part switch-part2">
+                    <div class="widget tagcloud" id="js-tagcloud">
+                        
+                    </div>
+                </section>
+                
+                
+                
+                <section class="switch-part switch-part3">
+                    <div id="js-friends">
+                    
+                      <a class="main-nav-link switch-friends-link" href="https://hexo.io">Hexo</a>
+                    
+                      <a class="main-nav-link switch-friends-link" href="https://pages.github.com/">GitHub</a>
+                    
+                      <a class="main-nav-link switch-friends-link" href="http://moxfive.xyz/">MOxFIVE</a>
+                    
+                    </div>
+                </section>
+                
+
+                
+                
+                <section class="switch-part switch-part4">
+                
+                    <div id="js-aboutme">专注于前端</div>
+                </section>
+                
+            </div>
+        </div>
+    </header>                
+</div>
+    </div>
+    <div class="mid-col">
+      <nav id="mobile-nav">
+      <div class="overlay">
+          <div class="slider-trigger"></div>
+          <h1 class="header-author js-mobile-header hide"><a href="/" title="回到主页">zhengchenyu</a></h1>
+      </div>
+    <div class="intrude-less">
+        <header id="header" class="inner">
+            <a href="/" class="profilepic">
+                <img src="/img/avatar.png" class="animated zoomIn">
+            </a>
+            <hgroup>
+              <h1 class="header-author"><a href="/" title="回到主页">zhengchenyu</a></h1>
+            </hgroup>
+            
+            <nav class="header-menu">
+                <ul>
+                
+                    <li><a href="/">主页</a></li>
+                
+                    <li><a href="/archives/">所有文章</a></li>
+                
+                    <li><a href="/tags/">标签云</a></li>
+                
+                    <li><a href="/about/">关于我</a></li>
+                
+                <div class="clearfix"></div>
+                </ul>
+            </nav>
+            <nav class="header-nav">
+                        <ul class="social">
+                            
+                                <a class="fa Email" target="_blank" href="mailto:123@123.com" title="Email"></a>
+                            
+                                <a class="fa GitHub" target="_blank" href="#" title="GitHub"></a>
+                            
+                                <a class="fa RSS" target="_blank" href="/atom.xml" title="RSS"></a>
+                            
+                        </ul>
+            </nav>
+        </header>                
+    </div>
+    <link class="menu-list" tags="标签" friends="友情链接" about="关于我"/>
+</nav>
+      <div class="body-wrap"><article id="post-机器学习-3-2-非监督学习之主成分分析" class="article article-type-post" itemscope itemprop="blogPost">
+  
+    <div class="article-meta">
+      <a href="/2017/10/22/机器学习-3-2-非监督学习之主成分分析/" class="article-date">
+      <time datetime="2017-10-22T07:56:23.000Z" itemprop="datePublished">2017-10-22</time>
+</a>
+
+
+    </div>
+  
+  <div class="article-inner">
+    
+      <input type="hidden" class="isFancy" />
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="article-title" itemprop="name">
+      机器学习-3.2-非监督学习之主成分分析.md
+    </h1>
+  
+
+      </header>
+      
+      <div class="article-info article-info-post">
+        
+
+        
+        <div class="clearfix"></div>
+      </div>
+      
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+          
+        <script type="text/javascript" src="/Users/zcy/Desktop/study/git/MathJax-master/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+<h1 id="主成分分析-PCA"><a href="#主成分分析-PCA" class="headerlink" title="主成分分析(PCA)"></a>主成分分析(PCA)</h1><blockquote>
+<p>严格上说PCA应该算是一种降低维度的方法，这里暂时归类为非监督学习中。</p>
+</blockquote>
+<h2 id="1-PCA理论简述"><a href="#1-PCA理论简述" class="headerlink" title="1 PCA理论简述"></a>1 PCA理论简述</h2><p>PCA的主要思路是将\(n\)维数据降维到\(k\)维子空间中，以滤除不需要的噪声或没有意义的特征信息。譬如我们有汽车的一组运行数据，包括专项半径、速度等。其中就一个用英里/每小时和千米/每小时描述的速度，很明显两者是呈线性关系的，只是因为舍入带来一些误差，对于这样的问题我们完全可以将这个\(n\)维数据移到\(n-1\)维子空间中。</p>
+<p>再举一个例子,对于RC直升机驾驶员的调查，\(x _1\)表示飞行员驾驶技能，\(x _2\)表示他对驾驶直升飞机的爱好程度。因为RC直升机很难驾驶，因此我们可以认为只有任务对驾驶RC直升机感兴趣的驾驶员才能学好它。因此,\(x _1\)和\(x _2\)有强相关性。如下图所示，我们可以假定一个方向\(u _1\)，用来表示\(x _1\)和\(x _2\)两个属性，仅仅在其垂直轴\(u _2\)上有少量噪声。</p>
+<p><img src="/images/机器学习/PCA驾驶员技能兴趣关系曲线.png" width="50%" height="50%" text-align="center/"></p>
+<p>对数据降维之前，我们需要对数据进行初始化，主要是一个归整的过程，将均值归整为0，将方差归整为1。依次按照如下公式进行归整。</p>
+<ul>
+<li>\(\mu  = \frac{1}{m}\sum\limits _{i = 1}^m {x^{(i)}} \)</li>
+<li>\({x^{(i)}}: = {x^{(i)}} - \mu \)</li>
+<li>\({\sigma ^2} = \frac{1}{m}\sum\limits _{i = 1}^m {(x^{(i)})^2} \)</li>
+<li>\({x^{(i)}}: = {x^{(i)}}/\sigma \)</li>
+</ul>
+<p>归整后的数据如下，可以知道如果\(x\)在向量\(u\)的投影最大。说明\(u\)在对\(x _1\)和\(x _2\)的降维过程中带来的损失越小。</p>
+<p><img src="/images/机器学习/PCA降维示例.png" width="50%" height="50%" text-align="center/"></p>
+<p>因此，可以需要保证下式最大：</p>
+
+$$\frac{1}{m}\sum\limits _{i = 1}^m {{{({x^{{{(i)}^T}}}u)}^2}}  = \frac{1}{m}\sum\limits _{i = 1}^m {{u^T}{x^{(i)}}{x^{{{(i)}^T}}}u}  = {u^T}(\frac{1}{m}\sum\limits _{i = 1}^m {{x^{(i)}}{x^{{{(i)}^T}}}} )u$$
+
+<p>问题也就转变为找到一组\(u\)使得，上式最大的问题。然后我们假定\(u\)为一组标准正交基，因此\(||u||=1\)。因此问题可写为如下形式：</p>
+
+$$\begin{gathered}   & \max {u^T}(\frac{1}{m}\sum\limits _{i = 1}^m {{x^{(i)}}{x^{{{(i)}^T}}}} )u \hfill \\\  s.t.: & ||u|| = 1 \hfill \\\ \end{gathered} $$
+
+<p>组成其拉格朗日函数如下：</p>
+
+$$L(u,\lambda ) = {u^T}(\frac{1}{m}\sum\limits _{i = 1}^m {x^{(i)}x^{(i)^T}} )u - \lambda (||u|| - 1)$$
+
+<p>这里我们设\(\Sigma=\frac{1}{m}\sum\limits _{i = 1}^m {x^{(i)}{x^{(i)^T}}}\)，然后对\(u\)求导数，易得:</p>
+$${\nabla _u}L(u,\lambda ) = \sum u - \lambda u = 0$$
+<p>因此，我们知道\(\lambda\)为\(\Sigma\)的特征值，\(u\)为对应的特征向量。恰好为我们要求的向量\(u\)。得到一组新的正交基后，我们就可以映射到新的空间中了。具体如下:</p>
+
+$${y^{(i)}} = {(u _1^T{x^{(i)}},u _2^T{x^{(i)}},...,u _k^T{x^{(i)}})^T}$$
+<h2 id="2-PCA的奇异值分解"><a href="#2-PCA的奇异值分解" class="headerlink" title="2. PCA的奇异值分解"></a>2. PCA的奇异值分解</h2><p>由于一般为\(n*n\)的维度，因此往往是一个很大的矩阵。对于维度很大，样本数目要少于维度很多的数据，这样计算往往有不够划算。因此我们可以通过求解\(x\)的特征值的方法来求节\(\Sigma\)的特征向量。</p>
+<blockquote>
+<p>由于求矩阵的单位特征向量，可以不考虑1/m这个系数。</p>
+</blockquote>
+<p>假如对\(x\)进行奇异值分解，其中\(U\)和\(V\)均为酉阵，\(\Lambda\)为对角阵。另外值得注意的是酉阵的可逆矩阵与转置矩阵相同。具体分解形式如下：</p>
+$$x = U\Lambda {V^T}$$
+
+<p>因此可以得到：</p>
+$$\Sigma  = x{x^T} = U\Lambda {V^T}V\Lambda {U^T} = U{\Lambda ^2}{U^T}$$$$\Sigma U = {\Lambda ^2}{U^T}$$
+<p>因此可以知道\(\Sigma\)的特征向量对应着\(x\)的奇异值分解中的\(U\)。同时\(\Sigma\)的特征值为\(x\)的奇异值的平方。</p>
+<h2 id="3-源码实现"><a href="#3-源码实现" class="headerlink" title="3 源码实现"></a>3 源码实现</h2><p>我们对k临近算法中的手写数字识别做分析。我们首先对数字映射到三维空间中，然后进行展示。然后在映射到样本数量维度的空间，实现对数字的识别。值得一提是，PCA可以将多种无法直接展示的多维数组转化为三维数据，然后更直观地进行分析。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div><div class="line">64</div><div class="line">65</div><div class="line">66</div><div class="line">67</div><div class="line">68</div><div class="line">69</div><div class="line">70</div><div class="line">71</div><div class="line">72</div><div class="line">73</div><div class="line">74</div><div class="line">75</div><div class="line">76</div><div class="line">77</div><div class="line">78</div><div class="line">79</div><div class="line">80</div><div class="line">81</div><div class="line">82</div><div class="line">83</div><div class="line">84</div><div class="line">85</div><div class="line">86</div><div class="line">87</div><div class="line">88</div><div class="line">89</div><div class="line">90</div><div class="line">91</div><div class="line">92</div><div class="line">93</div><div class="line">94</div><div class="line">95</div><div class="line">96</div><div class="line">97</div><div class="line">98</div><div class="line">99</div><div class="line">100</div><div class="line">101</div><div class="line">102</div><div class="line">103</div><div class="line">104</div><div class="line">105</div><div class="line">106</div><div class="line">107</div><div class="line">108</div><div class="line">109</div><div class="line">110</div><div class="line">111</div><div class="line">112</div><div class="line">113</div><div class="line">114</div><div class="line">115</div><div class="line">116</div><div class="line">117</div><div class="line">118</div><div class="line">119</div><div class="line">120</div><div class="line">121</div><div class="line">122</div><div class="line">123</div><div class="line">124</div><div class="line">125</div><div class="line">126</div><div class="line">127</div><div class="line">128</div><div class="line">129</div><div class="line">130</div><div class="line">131</div><div class="line">132</div><div class="line">133</div><div class="line">134</div><div class="line">135</div><div class="line">136</div><div class="line">137</div><div class="line">138</div><div class="line">139</div><div class="line">140</div><div class="line">141</div><div class="line">142</div><div class="line">143</div><div class="line">144</div><div class="line">145</div><div class="line">146</div><div class="line">147</div><div class="line">148</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">import</span> numpy <span class="keyword">as</span> np</div><div class="line"><span class="keyword">import</span> os</div><div class="line"><span class="keyword">from</span> numpy <span class="keyword">import</span> linalg</div><div class="line"><span class="keyword">import</span> matplotlib.pyplot <span class="keyword">as</span> plt</div><div class="line"><span class="keyword">from</span> mpl_toolkits.mplot3d <span class="keyword">import</span> axes3d, Axes3D</div><div class="line"></div><div class="line"><span class="keyword">global</span> g_label      <span class="comment"># 训练集的label</span></div><div class="line"></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">makeTrain</span><span class="params">(dir)</span>:</span></div><div class="line">  dirs=os.listdir(dir)</div><div class="line">  files = filter(<span class="keyword">lambda</span> item:<span class="keyword">not</span> os.path.isdir(item), dirs)</div><div class="line">  mat = []</div><div class="line">  label = []</div><div class="line">  <span class="keyword">for</span> file <span class="keyword">in</span> files:</div><div class="line">    arr = []</div><div class="line">    f = open(dir+<span class="string">"/"</span>+file)</div><div class="line">    <span class="keyword">while</span> <span class="keyword">True</span>:</div><div class="line">      line = f.readline()</div><div class="line">      <span class="keyword">if</span> <span class="keyword">not</span> line:</div><div class="line">        <span class="keyword">break</span></div><div class="line">      <span class="keyword">for</span> i <span class="keyword">in</span> range(len(line)<span class="number">-1</span>):        <span class="comment"># line[len(line)]='\n'</span></div><div class="line">        arr.append(float(line[i]))</div><div class="line">    mat.append(arr)</div><div class="line">    label.append(int(file.split(<span class="string">"_"</span>)[<span class="number">0</span>]))</div><div class="line">  <span class="keyword">return</span> (mat,label)</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">preprocessing</span><span class="params">(trainList)</span>:</span></div><div class="line">  train = np.array(trainList)</div><div class="line">  rows = len(train)</div><div class="line">  cols = len(train[<span class="number">0</span>])</div><div class="line">  <span class="comment"># 使数学期望为0</span></div><div class="line">  <span class="keyword">for</span> col <span class="keyword">in</span> range(cols):</div><div class="line">    mean = np.mean(train[:,col])</div><div class="line">    <span class="keyword">for</span> row <span class="keyword">in</span> range(rows):</div><div class="line">      train[row][col] = train[row][col]-mean</div><div class="line">    <span class="comment"># 使方差为1。 如果方差小于1,任务反差为0，则不更新该行。</span></div><div class="line">    <span class="comment"># 实际上，由于手写数字已经被归整为0,1这样的二值化图像，因此这里没有修改波定性。</span></div><div class="line">    var = np.var(train[:,col])</div><div class="line">    <span class="keyword">if</span> var &gt; <span class="number">1</span>:</div><div class="line">      print(<span class="string">"hello"</span>)</div><div class="line">      standard = np.sqrt(var)</div><div class="line">      <span class="keyword">for</span> row <span class="keyword">in</span> range(rows):</div><div class="line">        train[row][col] = train[row][col]/standard</div><div class="line">  <span class="keyword">return</span> train.tolist()</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">lowerDimension</span><span class="params">(u3t,dir)</span>:</span></div><div class="line">  <span class="comment"># 该函数将1024维度的数据转化为3维</span></div><div class="line">  dirs=os.listdir(dir)</div><div class="line">  files = filter(<span class="keyword">lambda</span> item:<span class="keyword">not</span> os.path.isdir(item), dirs)</div><div class="line">  mat = []</div><div class="line">  label = []</div><div class="line">  <span class="keyword">for</span> file <span class="keyword">in</span> files:</div><div class="line">    arr = []</div><div class="line">    f = open(dir+<span class="string">"/"</span>+file)</div><div class="line">    <span class="keyword">while</span> <span class="keyword">True</span>:</div><div class="line">      line = f.readline()</div><div class="line">      <span class="keyword">if</span> <span class="keyword">not</span> line:</div><div class="line">        <span class="keyword">break</span></div><div class="line">      <span class="keyword">for</span> i <span class="keyword">in</span> range(len(line)<span class="number">-1</span>):        <span class="comment"># line[len(line)]='\n'</span></div><div class="line">        arr.append(float(line[i]))</div><div class="line">    new_mat = u3t*np.mat(arr).T</div><div class="line">    label.append(int(file.split(<span class="string">"_"</span>)[<span class="number">0</span>]))</div><div class="line">    mat.append((np.array(new_mat.T)[<span class="number">0</span>]).tolist())</div><div class="line">  <span class="keyword">return</span> (mat,label)         <span class="comment"># mat为num*3的list</span></div><div class="line"></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">show3D</span><span class="params">(g_train_3d)</span>:</span></div><div class="line">  fig = plt.figure()</div><div class="line">  ax = Axes3D(fig)</div><div class="line">  <span class="comment">#将数据点分成三部分画，在颜色上有区分度</span></div><div class="line">  m = len(g_train_3d)</div><div class="line">  <span class="keyword">for</span> i <span class="keyword">in</span> range(m):</div><div class="line">    <span class="keyword">if</span> g_label[i] == <span class="number">0</span>:</div><div class="line">      ax.scatter(g_train_3d[i][<span class="number">0</span>], g_train_3d[i][<span class="number">1</span>], g_train_3d[i][<span class="number">2</span>], c=<span class="string">'b'</span>)</div><div class="line">    <span class="keyword">elif</span> g_label[i] == <span class="number">1</span>:</div><div class="line">      ax.scatter(g_train_3d[i][<span class="number">0</span>], g_train_3d[i][<span class="number">1</span>], g_train_3d[i][<span class="number">2</span>], c=<span class="string">'c'</span>)</div><div class="line">    <span class="keyword">elif</span> g_label[i] == <span class="number">2</span>:</div><div class="line">      ax.scatter(g_train_3d[i][<span class="number">0</span>], g_train_3d[i][<span class="number">1</span>], g_train_3d[i][<span class="number">2</span>], c=<span class="string">'g'</span>)</div><div class="line">    <span class="keyword">elif</span> g_label[i] == <span class="number">3</span>:</div><div class="line">      ax.scatter(g_train_3d[i][<span class="number">0</span>], g_train_3d[i][<span class="number">1</span>], g_train_3d[i][<span class="number">2</span>], c=<span class="string">'k'</span>)</div><div class="line">    <span class="keyword">elif</span> g_label[i] == <span class="number">4</span>:</div><div class="line">      ax.scatter(g_train_3d[i][<span class="number">0</span>], g_train_3d[i][<span class="number">1</span>], g_train_3d[i][<span class="number">2</span>], c=<span class="string">'m'</span>)</div><div class="line">    <span class="keyword">elif</span> g_label[i] == <span class="number">5</span>:</div><div class="line">      ax.scatter(g_train_3d[i][<span class="number">0</span>], g_train_3d[i][<span class="number">1</span>], g_train_3d[i][<span class="number">2</span>], c=<span class="string">'r'</span>)</div><div class="line">    <span class="keyword">elif</span> g_label[i] == <span class="number">6</span>:</div><div class="line">      ax.scatter(g_train_3d[i][<span class="number">0</span>], g_train_3d[i][<span class="number">1</span>], g_train_3d[i][<span class="number">2</span>], c=<span class="string">'w'</span>)</div><div class="line">    <span class="keyword">elif</span> g_label[i] == <span class="number">7</span>:</div><div class="line">      ax.scatter(g_train_3d[i][<span class="number">0</span>], g_train_3d[i][<span class="number">1</span>], g_train_3d[i][<span class="number">2</span>], c=<span class="string">'y'</span>)</div><div class="line"><span class="comment">#    elif g_label[i] == 8:</span></div><div class="line"><span class="comment">#      ax.scatter(g_train_3d[i][0], g_train_3d[i][1], g_train_3d[i][2], c='b', depthshade=False)</span></div><div class="line"><span class="comment">#    elif g_label[i] == 9:</span></div><div class="line"><span class="comment">#      ax.scatter(g_train_3d[i][0], g_train_3d[i][1], g_train_3d[i][2], c='c', depthshade=False)</span></div><div class="line">  ax.set_zlabel(<span class="string">'Z'</span>) <span class="comment">#坐标轴</span></div><div class="line">  ax.set_ylabel(<span class="string">'Y'</span>)</div><div class="line">  ax.set_xlabel(<span class="string">'X'</span>)</div><div class="line">  plt.show()</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">test</span><span class="params">(ukt, train_3d, dir)</span>:</span></div><div class="line">  test_kd,test_label = lowerDimension(ukt, dir)</div><div class="line">  testN = len(test_kd)</div><div class="line">  right=<span class="number">0</span></div><div class="line">  wrong=<span class="number">0</span></div><div class="line">  <span class="keyword">for</span> i <span class="keyword">in</span> range(testN):</div><div class="line">    label = classify(np.array(test_kd[i]),np.array(train_3d),<span class="number">10</span>)</div><div class="line">    <span class="keyword">if</span> str(test_label[i]) == label:</div><div class="line">      right = right + <span class="number">1</span></div><div class="line">    <span class="keyword">else</span>:</div><div class="line">      wrong = wrong + <span class="number">1</span></div><div class="line">  print(<span class="string">"right="</span>, right, <span class="string">", wrong="</span>, wrong)</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">classify</span><span class="params">(vec,train_kd,k)</span>:</span></div><div class="line">  <span class="comment"># 计算各个训练数据与测试数据的距离</span></div><div class="line">  m = len(g_label)</div><div class="line">  dis = []</div><div class="line">  <span class="keyword">for</span> i <span class="keyword">in</span> range(m):</div><div class="line">    dis.append([linalg.norm(vec-train_kd[i]),g_label[i]])</div><div class="line">  dis = sorted(dis, key=<span class="keyword">lambda</span> v:v[<span class="number">0</span>])</div><div class="line">  <span class="comment"># 计算相似度最高的k个值，这里写入map做累积</span></div><div class="line">  dic = &#123;&#125;</div><div class="line">  <span class="keyword">for</span> j <span class="keyword">in</span> range(k):</div><div class="line">    <span class="keyword">if</span> <span class="keyword">not</span> str(dis[j][<span class="number">1</span>]) <span class="keyword">in</span> dic:</div><div class="line">      dic[str(dis[j][<span class="number">1</span>])]=<span class="number">1</span></div><div class="line">    <span class="keyword">else</span>:</div><div class="line">      dic[str(dis[j][<span class="number">1</span>])]=dic[str(dis[j][<span class="number">1</span>])]+<span class="number">1</span></div><div class="line">  <span class="keyword">return</span> max(dic.items(), key=<span class="keyword">lambda</span> x: x[<span class="number">1</span>])[<span class="number">0</span>]</div><div class="line"></div><div class="line"><span class="keyword">if</span> __name__==<span class="string">"__main__"</span>:</div><div class="line">  <span class="comment"># 1 预处理</span></div><div class="line">  <span class="comment"># 这里为了显示降低维度在训练样本中的作用，仅仅是用了300个样本</span></div><div class="line">  (train,g_label) = makeTrain(<span class="string">"/Users/zcy/Desktop/study/git/mlearning/res/trainingDigits1"</span>)</div><div class="line">  <span class="comment"># 进行预处理操作，将均值设置为0，将方差归整为1</span></div><div class="line">  train_processed = preprocessing(train)</div><div class="line"></div><div class="line">  <span class="comment"># 2 降低维度</span></div><div class="line">  <span class="comment"># 首先计算x的奇异值</span></div><div class="line">  train_mat = np.mat(train_processed)</div><div class="line">  train_mat = train_mat.T               <span class="comment"># 转化为n*m 1024*200</span></div><div class="line">  U,sigma,VT = linalg.svd(train_mat)      <span class="comment"># U的维度为n*n 即1024*1024. sigma为m*1. vt为300*300</span></div><div class="line">  u3=U[np.ix_(np.arange(<span class="number">1024</span>), np.arange(<span class="number">3</span>))]      <span class="comment"># 提取对应最高特征值最高的三个方向,u3的维度为1024*3</span></div><div class="line">  <span class="comment"># 将1024维的数字图像降低维度到三维向量</span></div><div class="line">  train_3d,_ = lowerDimension(u3.T,<span class="string">"/Users/zcy/Desktop/study/git/mlearning/res/trainingDigits1"</span>)</div><div class="line">  train_kd,_ = lowerDimension(U.T,<span class="string">"/Users/zcy/Desktop/study/git/mlearning/res/trainingDigits1"</span>)</div><div class="line"></div><div class="line">  <span class="comment"># 3 展示3维下的模型信息</span></div><div class="line">  <span class="comment">#show3D(train_3d)</span></div><div class="line"></div><div class="line">  <span class="comment"># 4 使用k邻域验证测试样本</span></div><div class="line">  <span class="comment">#test(u3.T, train_3d, "/Users/zcy/Desktop/study/git/mlearning/res/testDigits1")</span></div><div class="line">  test(U.T,train_kd,<span class="string">"/Users/zcy/Desktop/study/git/mlearning/res/testDigits1"</span>)</div></pre></td></tr></table></figure>
+<p>500个测试样本中，有27个识别错误，具体识别率为94.6%。这与未使用PCA降维的完全一致。该例子似乎尚未体现到PCA有什么优势，以后有机会在分析。当然如果映射到三维空间，识别率仅仅为75.2%，因此不要过度降维。下面是一个展示到部分数据的三维图。</p>
+<blockquote>
+<p>考虑到颜色，图片只显示部分类别数据。</p>
+</blockquote>
+<p><img src="/images/机器学习/PCA手写数字三维展示图.png" width="50%" height="50%" text-align="center/"></p>
+<h2 id="4-参考文献"><a href="#4-参考文献" class="headerlink" title="4 参考文献"></a>4 参考文献</h2><ul>
+<li>cs229-note10</li>
+<li>机器学习实战</li>
+</ul>
+
+      
+    </div>
+    
+  </div>
+  
+    
+    <div class="copyright">
+        <p><span>本文标题:</span><a href="/2017/10/22/机器学习-3-2-非监督学习之主成分分析/">机器学习-3.2-非监督学习之主成分分析.md</a></p>
+        <p><span>文章作者:</span><a href="/" title="回到主页">zhengchenyu</a></p>
+        <p><span>发布时间:</span>2017-10-22, 15:56:23</p>
+        <p><span>最后更新:</span>2017-10-22, 16:44:06</p>
+        <p>
+            <span>原始链接:</span><a class="post-url" href="/2017/10/22/机器学习-3-2-非监督学习之主成分分析/" title="机器学习-3.2-非监督学习之主成分分析.md">http://yoursite.com/2017/10/22/机器学习-3-2-非监督学习之主成分分析/</a>
+            <span class="copy-path" data-clipboard-text="原文: http://yoursite.com/2017/10/22/机器学习-3-2-非监督学习之主成分分析/　　作者: zhengchenyu" title="点击复制文章链接"><i class="fa fa-clipboard"></i></span>
+            <script> var clipboard = new Clipboard('.copy-path'); </script>
+        </p>
+        <p>
+            <span>许可协议:</span><i class="fa fa-creative-commons"></i> <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/" title="CC BY-NC-SA 4.0 International" target = "_blank">"署名-非商用-相同方式共享 4.0"</a> 转载请保留原文链接及作者。
+        </p>
+    </div>
+
+
+
+    <nav id="article-nav">
+        
+        
+            <div id="article-nav-older" class="article-nav-title">
+                <a href="/2017/10/15/机器学习-2-8-监督学习之k近邻算法/">
+                    机器学习-2.8-监督学习之k近邻算法
+                </a>
+            </div>
+        
+    </nav>
+
+  
+</article>
+
+    <div id="toc" class="toc-article">
+        <strong class="toc-title">文章目录</strong>
+        
+            <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#主成分分析-PCA"><span class="toc-number">1.</span> <span class="toc-text">主成分分析(PCA)</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#1-PCA理论简述"><span class="toc-number">1.1.</span> <span class="toc-text">1 PCA理论简述</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-PCA的奇异值分解"><span class="toc-number">1.2.</span> <span class="toc-text">2. PCA的奇异值分解</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-源码实现"><span class="toc-number">1.3.</span> <span class="toc-text">3 源码实现</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#4-参考文献"><span class="toc-number">1.4.</span> <span class="toc-text">4 参考文献</span></a></li></ol></li></ol>
+        
+    </div>
+    <style>
+        .left-col .switch-btn,
+        .left-col .switch-area {
+            display: none;
+        }
+        .toc-level-3 i,
+        .toc-level-3 ol {
+            display: none !important;
+        }
+    </style>
+
+    <input type="button" id="tocButton" value="隐藏目录"  title="点击按钮隐藏或者显示文章目录">
+
+    <script>
+        yiliaConfig.toc = ["隐藏目录", "显示目录", !!"false"];
+    </script>
+
+
+
+    
+<div class="share">
+    
+        <div class="bdsharebuttonbox">
+            <a href="#" class="fa fa-twitter bds_twi" data-cmd="twi" title="分享到推特"></a>
+            <a href="#" class="fa fa-weibo bds_tsina" data-cmd="tsina" title="分享到新浪微博"></a>
+            <a href="#" class="fa fa-qq bds_sqq" data-cmd="sqq" title="分享给 QQ 好友"></a>
+            <a href="#" class="fa fa-files-o bds_copy" data-cmd="copy" title="复制网址"></a>
+            <a href="#" class="fa fa fa-envelope-o bds_mail" data-cmd="mail" title="通过邮件分享"></a>
+            <a href="#" class="fa fa-weixin bds_weixin" data-cmd="weixin" title="生成文章二维码"></a>
+            <a href="#" class="fa fa-share-alt bds_more" data-cmd="more"></i></a>
+        </div>
+        <script>
+            window._bd_share_config={
+                "common":{"bdSnsKey":{},"bdText":"机器学习-3.2-非监督学习之主成分分析.md　| Hexo　","bdMini":"2","bdMiniList":false,"bdPic":"","bdStyle":"0","bdSize":"24"},"share":{}};with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='http://bdimg.share.baidu.com/static/api/js/share.js?v=89860593.js?cdnversion='+~(-new Date()/36e5)];
+        </script>
+    
+
+    
+</div>
+
+
+
+
+
+
+
+    
+
+
+
+
+    <div class="scroll" id="post-nav-button">
+        
+            <a href="/" title="回到主页"><i class="fa fa-home"></i></a>
+        
+
+        <a title="文章列表"><i class="fa fa-bars"></i><i class="fa fa-times"></i></a>
+
+        
+            <a href="/2017/10/15/机器学习-2-8-监督学习之k近邻算法/" title="下一篇: 机器学习-2.8-监督学习之k近邻算法">
+                <i class="fa fa-angle-right"></i>
+            </a>
+        
+    </div>
+
+    <ul class="post-list"><li class="post-list-item"><a class="post-list-link" href="/2017/10/22/机器学习-3-2-非监督学习之主成分分析/">机器学习-3.2-非监督学习之主成分分析.md</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/10/15/机器学习-2-8-监督学习之k近邻算法/">机器学习-2.8-监督学习之k近邻算法</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/09/24/机器学习-3-1-非监督学习之聚类/">机器学习-3.1-非监督学习之聚类.md</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/09/08/机器学习-2-7-监督学习之支持向量机/">机器学习-2.7-监督学习之支持向量机</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/08/05/机器学习-2-6-监督学习之朴素贝叶斯算法/">机器学习-2.6-监督学习之朴素贝叶斯算法</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/08/05/机器学习-2-5-监督学习之生成型学习算法/">机器学习-2.5-监督学习之生成型学习算法</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/07/24/机器学习-2-4-监督学习之softmax/">机器学习-2.4-监督学习之softmax</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/07/16/机器学习-2.3-监督学习之通用线性模型/">机器学习-2.3-监督学习之通用线性模型</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/06/13/机器学习-2.2-监督学习之分类/">机器学习 2.2 监督学习之逻辑回归</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/06/10/机器学习-2.1-监督学习之线性回归/">机器学习 2.1 监督学习之线性回归</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/06/10/机器学习-1-绪论/">机器学习 1 绪论</a></li><li class="post-list-item"><a class="post-list-link" href="/2017/05/06/MyFirstBlog/">MyFirstBlog</a></li></ul>
+
+
+
+
+    <script>
+        
+    </script>
+</div>
+      <footer id="footer">
+    <div class="outer">
+        <div id="footer-info">
+            <div class="footer-left">
+                <i class="fa fa-copyright"></i> 
+                2016-2017 zhengchenyu
+            </div>
+            <div class="footer-right">
+                <a href="http://hexo.io/" target="_blank" title="快速、简洁且高效的博客框架">Hexo</a>  Theme <a href="https://github.com/MOxFIVE/hexo-theme-yelee" target="_blank" title="简而不减 Hexo 双栏博客主题  v3.5">Yelee</a> by MOxFIVE <i class="fa fa-heart animated infinite pulse"></i>
+            </div>
+        </div>
+        
+            <div class="visit">
+                
+                    <span id="busuanzi_container_site_pv" style='display:none'>
+                        <span id="site-visit" title="本站到访数"><i class="fa fa-user" aria-hidden="true"></i><span id="busuanzi_value_site_uv"></span>
+                        </span>
+                    </span>
+                
+                
+                    <span>| </span>
+                
+                
+                    <span id="busuanzi_container_page_pv" style='display:none'>
+                        <span id="page-visit"  title="本页阅读量"><i class="fa fa-eye animated infinite pulse" aria-hidden="true"></i><span id="busuanzi_value_page_pv"></span>
+                        </span>
+                    </span>
+                
+            </div>
+        
+    </div>
+</footer>
+    </div>
+    
+<script data-main="/js/main.js" src="//cdn.bootcss.com/require.js/2.2.0/require.min.js"></script>
+
+    <script>
+        $(document).ready(function() {
+            var iPad = window.navigator.userAgent.indexOf('iPad');
+            if (iPad > -1 || $(".left-col").css("display") === "none") {
+                var bgColorList = ["#9db3f4", "#414141", "#e5a859", "#f5dfc6", "#c084a0", "#847e72", "#cd8390", "#996731"];
+                var bgColor = Math.ceil(Math.random() * (bgColorList.length - 1));
+                $("body").css({"background-color": bgColorList[bgColor], "background-size": "cover"});
+            }
+            else {
+                var backgroundnum = 5;
+                var backgroundimg = "url(/background/bg-x.jpg)".replace(/x/gi, Math.ceil(Math.random() * backgroundnum));
+                $("body").css({"background": backgroundimg, "background-attachment": "fixed", "background-size": "cover"});
+            }
+        })
+    </script>
+
+
+
+
+
+<div class="scroll" id="scroll">
+    <a href="#" title="返回顶部"><i class="fa fa-arrow-up"></i></a>
+    <a href="#comments" onclick="load$hide();" title="查看评论"><i class="fa fa-comments-o"></i></a>
+    <a href="#footer" title="转到底部"><i class="fa fa-arrow-down"></i></a>
+</div>
+<script>
+    // Open in New Window
+    
+        var oOpenInNew = {
+            
+            
+            
+            
+            
+            
+             archives: ".archive-article-title", 
+             miniArchives: "a.post-list-link", 
+            
+             friends: "#js-friends a", 
+             socail: ".social a" 
+        }
+        for (var x in oOpenInNew) {
+            $(oOpenInNew[x]).attr("target", "_blank");
+        }
+    
+</script>
+
+<script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js">
+</script>
+  </div><!-- hexo-inject:begin --><!-- Begin: Injected MathJax -->
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({"tex2jax":{"inlineMath":[["$","$"],["\\(","\\)"]]}});
+</script>
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Queue(function() {
+    var all = MathJax.Hub.getAllJax(), i;
+    for(i=0; i < all.length; i += 1) {
+      all[i].SourceElement().parentNode.className += ' has-jax';
+    }
+  });
+</script>
+
+<script type="text/javascript" src="//cdn.bootcss.com/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+<!-- End: Injected MathJax -->
+<!-- hexo-inject:end -->
+</body>
+</html>
