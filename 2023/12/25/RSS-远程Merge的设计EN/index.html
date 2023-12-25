@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  
+  
+  <title>RSS-Remote Merge Design | Hexo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="description" content="1 Default shuffle  Note: The first chapter briefly introduces the principle of default shuffle, with the purpose of designing remote merge. Reading is optional.  We analyze the shuffle models of MapR">
+<meta property="og:type" content="article">
+<meta property="og:title" content="RSS-Remote Merge Design">
+<meta property="og:url" content="http://example.com/2023/12/25/RSS-%E8%BF%9C%E7%A8%8BMerge%E7%9A%84%E8%AE%BE%E8%AE%A1EN/index.html">
+<meta property="og:site_name" content="Hexo">
+<meta property="og:description" content="1 Default shuffle  Note: The first chapter briefly introduces the principle of default shuffle, with the purpose of designing remote merge. Reading is optional.  We analyze the shuffle models of MapR">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="http://example.com/images/rss/remote_merge_by_sub_segment.png">
+<meta property="og:image" content="http://example.com/images/rss/remote_merge_structure.png">
+<meta property="og:image" content="http://example.com/images/rss/remote_merge_ufile_format.png">
+<meta property="article:published_time" content="2023-12-25T10:58:15.000Z">
+<meta property="article:modified_time" content="2023-12-25T11:20:22.621Z">
+<meta property="article:author" content="zhengchenyu">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/images/rss/remote_merge_by_sub_segment.png">
+  
+    <link rel="alternate" href="/atom.xml" title="Hexo" type="application/atom+xml">
+  
+  
+    <link rel="shortcut icon" href="/favicon.png">
+  
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+  
+    
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.min.css">
+
+  
+  
+<meta name="generator" content="Hexo 7.0.0"></head>
+
+<body>
+  <div id="container">
+    <div id="wrap">
+      <header id="header">
+  <div id="banner"></div>
+  <div id="header-outer" class="outer">
+    <div id="header-title" class="inner">
+      <h1 id="logo-wrap">
+        <a href="/" id="logo">Hexo</a>
+      </h1>
+      
+    </div>
+    <div id="header-inner" class="inner">
+      <nav id="main-nav">
+        <a id="main-nav-toggle" class="nav-icon"><span class="fa fa-bars"></span></a>
+        
+          <a class="main-nav-link" href="/">Home</a>
+        
+          <a class="main-nav-link" href="/archives">Archives</a>
+        
+      </nav>
+      <nav id="sub-nav">
+        
+        
+          <a class="nav-icon" href="/atom.xml" title="RSS Feed"><span class="fa fa-rss"></span></a>
+        
+        <a class="nav-icon nav-search-btn" title="Search"><span class="fa fa-search"></span></a>
+      </nav>
+      <div id="search-form-wrap">
+        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit">&#xF002;</button><input type="hidden" name="sitesearch" value="http://example.com"></form>
+      </div>
+    </div>
+  </div>
+</header>
+
+      <div class="outer">
+        <section id="main"><article id="post-RSS-远程Merge的设计EN" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
+  <div class="article-meta">
+    <a href="/2023/12/25/RSS-%E8%BF%9C%E7%A8%8BMerge%E7%9A%84%E8%AE%BE%E8%AE%A1EN/" class="article-date">
+  <time class="dt-published" datetime="2023-12-25T10:58:15.000Z" itemprop="datePublished">2023-12-25</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="p-name article-title" itemprop="headline name">
+      RSS-Remote Merge Design
+    </h1>
+  
+
+      </header>
+    
+    <div class="e-content article-entry" itemprop="articleBody">
+      
+        <h1 id="1-default-shuffle"><a class="markdownIt-Anchor" href="#1-default-shuffle"></a> 1 Default shuffle</h1>
+<blockquote>
+<p>Note: The first chapter briefly introduces the principle of default shuffle, with the purpose of designing remote merge. Reading is optional.</p>
+</blockquote>
+<p>We analyze the shuffle models of MapReduce, Tez, and Spark in turn.</p>
+<h2 id="11-mapreduce"><a class="markdownIt-Anchor" href="#11-mapreduce"></a> 1.1 MapReduce</h2>
+<p>Map writes the record to the memory. When the memory exceeds the threshold, the memory data is spilled to the disk file, and the Record is written to the disk file in order of partitionid+key. After Map has processed all records, it will spill the data currently in memory to a disk file. Then read all the files spilled to the disk and merge them in the order of partitionid+key to get the sorted Records.</p>
+<p>The Reduce will obtain multiple sets of locally sorted Records under the corresponding partition from the Map, then use the minimum heap K-way merge sort to aggregate these Records into one globally sorted Records.</p>
+<blockquote>
+<p>Note: The purpose of sorting according to partitionid is that when the Reduce side obtains the data from the Map side, it should be read as sequentially as possible. For MR, Tez, and Spark, regardless of whether they are sorted or not, as long as there are partitioned, they need to be sorted according to partitionid.</p>
+</blockquote>
+<h2 id="12-tez"><a class="markdownIt-Anchor" href="#12-tez"></a> 1.2 Tez</h2>
+<p>There are two cases of tez: (1) ordered io  (2) unordered io.</p>
+<p>Ordered io is the same as MapReduce and so ignore it here.</p>
+<p>Unordered io is generally used in hashjoin and other situations where keys are not required for sorting. Non-sorted io adopts a ready-to-use solution. Map writes the Record directly to the file or writes it to the file through cache. The Reduce side can also read and use it when reading data.</p>
+<h2 id="13-spark"><a class="markdownIt-Anchor" href="#13-spark"></a> 1.3 Spark</h2>
+<p>Spark’s shuffle is more complex and more reasonable. Some tasks do not require sort and combine, so spark users can determine the shuffle logic according to their needs.</p>
+<h3 id="131-shuffle-write-operation"><a class="markdownIt-Anchor" href="#131-shuffle-write-operation"></a> 1.3.1 Shuffle write operation</h3>
+<p>When writing shuffle data, three writers are supported:</p>
+<ul>
+<li>(1) BypassMergeSortShuffleWriter</li>
+</ul>
+<p>A temporary file is generated for each partition. When writing record, find the corresponding partition and write it directly to the corresponding temporary file. Then when all data is processed, these temporary files are written to a final file in order of the partitions, and the temporary files are deleted.</p>
+<ul>
+<li>(2) UnsafeShuffleWriter</li>
+</ul>
+<p>UnsafeShuffleWriter mainly implements specific logic through ShuffleExternalSorter. When writing a Record, the serialization operation is performed directly and the serialized bytes are copied to the requested memory. At the same time, the address and partition of the record will also be recorded into the memory (inMemSorter).</p>
+<p>When the memory reaches the threshold, spill operation will be performed. Based on the information in memory (inMemSorter), we can easily get a Record sorted by partition and write it to a file.</p>
+<p>When all Records are processed, we will spill the records currently in memory into the file. Finally, all spilled files are aggregated once. Since the previously spilled files have been sorted according to the partition, we can copy the corresponding copies of all the spilled files to the final file in the order of the partitions. The final file obtained in this way is the partition-sorted file.</p>
+<ul>
+<li>(3) SortShuffleWriter</li>
+</ul>
+<p>SortShuffleWriter mainly implements specific logic through ExternalSorter. ExternalSorter decides whether to combine and sort based on the user’s needs.</p>
+<p>When writing record, it will be inserted directly into memory. If combine is required, the memory architecture is map, otherwise it is buffer.</p>
+<p>If the current evaluation memory is greater than the threshold, the spill operation will be triggered. During the spill operation, the Record will be spilled to the disk. This process requires sorting. The specific comparator will use different values according to different user needs. If keyordering is set, it will be sorted by key. If keyordering is not set, but aggregator (i.e. combine) is set, the keys are sorted according to  the hashcode of key, thus ensuring that the same keys are organized together to facilitate combine operations. If neither keyordering nor aggregator is set, it will be sorted according to partition.</p>
+<p>When all Records are written, the spill files need to be read and merged into a globally ordered file.<br />
+​<br />
+Comparison of three writers</p>
+<table>
+<thead>
+<tr>
+<th>writer</th>
+<th>advantages</th>
+<th>disadvantages</th>
+<th>scene</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>BypassMergeSortShuffleWriter</td>
+<td>(1) Only serialized once. <br>(2) Using hashmap-like data structure, inserting data is fast.</td>
+<td>(1) Combine and sort are not supported <br>(2) Each partition must generate a temporary file, which will generate too many temporary files.</td>
+<td>Suitable for situations where the number of partitions is small (default is less than or equal to 200) and there is no combine.</td>
+</tr>
+<tr>
+<td>UnsafeShuffleWriter</td>
+<td>(1) Only serialized once. <br>(2) The number of files spilled to disk is limited and is no longer based on the number of partitions, and can support larger partitions.</td>
+<td>(1) Combine, sort is not supported <br>(2) The writing order Record order will be disrupted, and supportsRelocationOfSerializedObjects is required.</td>
+<td>Applicable to situations where combine does not exist, and supportsRelocationOfSerializedObjects is true, and the maximum number of supported partitions is 16777216.</td>
+</tr>
+<tr>
+<td>SortShuffleWriter</td>
+<td>(1) Supports combine, sort <br> (2) Suitable for all scenarios <br> (3) The number of files spilled to disk is limited</td>
+<td>(1) Multiple serializations are required</td>
+<td>Suitable for all scenarios.</td>
+</tr>
+<tr>
+<td>​</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h3 id="132-shuffle-read"><a class="markdownIt-Anchor" href="#132-shuffle-read"></a> 1.3.2 shuffle read</h3>
+<p>Currently there is only one implementation of BlockStoreShuffleReader. Reduce will first pull the data. Decide whether to combine based on user needs. Then decide whether to sort based on the user’s needs. Finally, it will be returned to downstream. The Reduce side mainly merges the data of the specified partitions generated by each Map. The Merge process here is similar to the final merge process of all spill files by SortShuffleWriter, and will not be described in detail.</p>
+<h2 id="14-summary"><a class="markdownIt-Anchor" href="#14-summary"></a> 1.4 Summary</h2>
+<p>We analyzed three frameworks. In fact, as long as the functional requirements of the Spark framework are implemented, the requirements of MapReduce and Tez can be met.</p>
+<p>For Hadoop MapReduce and Tez’s ordered io, it is essentially a special case of spark sorting. For Tez’s unordered io, it is essentially a special case of spark’s non-sorting.</p>
+<h2 id="2-task-requirement-analysis-what-types-of-tasks-require-remote-merge"><a class="markdownIt-Anchor" href="#2-task-requirement-analysis-what-types-of-tasks-require-remote-merge"></a> 2 Task requirement analysis: What types of tasks require remote merge?</h2>
+<p>Currently, uniffle’s map-side operations no longer require disk operations. This article mainly considers the situation on the reduce side. Mainly divided into the following situations:</p>
+<ul>
+<li>(1) For spark’s non-sorted, non-aggregated, tez unordered io, Record is ready to use. It does not require any global aggregation and sorting operations, and only requires very little memory. The current version of uniffle will not use disk if the memory settings are reasonable. Just use the current uniffle solution. This article will not discuss this aspect.</li>
+<li>(2) For spark sorting or aggregation tasks, tez ordered io, mapreduce, due to the need for global sorting or aggregation, the memory may not be enough, and the record may be spilled to the disk. This article mainly discusses this situation. According to the discussion in the first section, the SortShuffleWriter reference is more meaningful because both need to deserialize and sort.</li>
+</ul>
+<h2 id="3-solution-selection-why-choose-the-remote-merge-solution"><a class="markdownIt-Anchor" href="#3-solution-selection-why-choose-the-remote-merge-solution"></a> 3 Solution selection: Why choose the remote merge solution?</h2>
+<h3 id="31-situations-where-sort-is-required"><a class="markdownIt-Anchor" href="#31-situations-where-sort-is-required"></a> 3.1 Situations where sort is required</h3>
+<h4 id="311-how-to-sort"><a class="markdownIt-Anchor" href="#311-how-to-sort"></a> 3.1.1 How to sort</h4>
+<p>For sorting operations, Map will generally be sorted to obtain a set of partially sorted records, here called segments, and then reduce will obtain all segments and merge them.</p>
+<p>So how to merge? Here Spark, MR, and Tez all use minimum heap K-way merge sorting. We can continue this approach.</p>
+<h2 id="312-where-to-merge"><a class="markdownIt-Anchor" href="#312-where-to-merge"></a> 3.1.2 Where to merge</h2>
+<p>Merging there is more critical, because it involves whether or where we will spill. Again our goal is to avoid performing file operations on the same machine as the task.</p>
+<p>(1) Sort in Reduce</p>
+<p>To avoid spilling to disk, sorting can still be done on the reduce side. On the reduce side, Merger can only obtain a small portion of the Segment content, and then perform merge sorting. Resources will be obtained on demand according to the sorted order, and finally a globally sorted Records will be formed.</p>
+<img src="/images/rss/remote_merge_by_sub_segment.png" width=50% height=50% text-align=center/>
+<ul>
+<li>Advantages: The shuffle server does not require a key comparator.</li>
+<li>Disadvantages: Block data information needs to be maintained.</li>
+</ul>
+<p>Generally, the number of blocks is large and the amount of data in each block is not large. Therefore, a large amount of block metadata information needs to be maintained on the reduce side. More importantly, this solution generates a large number of IO operations, and the performance is difficult to guarantee. Therefore this option is ruled out.</p>
+<p>(2) Sorting on the shuffle server side</p>
+<p>BufferManager and FlushManager maintain block information in memory and disk. We only need to provide a service to merge these blocks and obtain globally sorted Records.</p>
+<ul>
+<li>Advantages: You can use the metadata information already available on the shuffle server.</li>
+<li>Disadvantage: The shuffle server needs to obtain the comparator of the task.</li>
+</ul>
+<p>Based on the above analysis, it was decided to use the scheme of sorting on the shuffle server side.</p>
+<p>​</p>
+<h1 id="4-scheme-design"><a class="markdownIt-Anchor" href="#4-scheme-design"></a> 4 Scheme Design</h1>
+<h2 id="41-solution-introduction"><a class="markdownIt-Anchor" href="#41-solution-introduction"></a> 4.1 Solution introduction</h2>
+<blockquote>
+<p>UFile represents a data set, containing a set of sorted Records. For the map side, it directly corresponds to the existing Block. For the reduce side, the size of UFile will be determined based on the cache size.</p>
+</blockquote>
+<img src="/images/rss/remote_merge_structure.png" width=50% height=50% text-align=center/>
+<p>The process is as follows:</p>
+<ul>
+<li>(1) The map side produces records and then sends them to the shuffle server.</li>
+<li>(2) The shuffle server will store the data in the cache, or cache it to the local file system or remote file system through the flush manager.</li>
+<li>(3) Add a new merge manager to the shuffle server to manage each shuffle. Segment information is recorded under each partition, which is called InMemorySegment in the cache and OnDiskSegment in the file. The data in InMemorySegment comes from bufferPool, and the data in OnDiskSegment comes from files.</li>
+<li>(4) When certain conditions are met, some segments are merged according to a certain algorithm, and the merged results are written to local files or remote storage.</li>
+<li>(5) When the reduce side reads data, it is a merge sort process. After the merge operation in the shuffle server, a certain partition will have a few merged ordered files left. We will read the files required by the reduce side based on the idea of merge sort.</li>
+</ul>
+<blockquote>
+<p>Note: If there are only a few segments, we don’t need to merge the segments into a new file, but can perform real-time merge.</p>
+</blockquote>
+<h2 id="42-how-to-read"><a class="markdownIt-Anchor" href="#42-how-to-read"></a> 4.2 How to read?</h2>
+<p>Currently, Uniffle’s shuffle reader uses blockid as the read mark, which makes it easy to verify whether an accurate and complete records are obtained. For remote merge, we no longer use the blockid generated by the map segment. The most accurate semantics is to read in the order of keys, that is, the next read should start from the next key that was read last time.</p>
+<p>In order to speed up the implementation of this semantics, I used an index on the merge side to read. A large number of io operations can be skipped.</p>
+<img src="/images/rss/remote_merge_ufile_format.png" width=50% height=50% text-align=center/>
+<p>When writing a file, sections will be divided according to a certain size, the value of the first key of each section and the starting address and length of the section will be recorded, and these metadata information will be written to the file. In this way, a large number of IO operations can be skipped when reading.</p>
+<blockquote>
+<p>I will explore the method of directly recording offset as an alternative to this solution.</p>
+</blockquote>
+<h1 id="5-plan"><a class="markdownIt-Anchor" href="#5-plan"></a> 5 Plan</h1>
+<p>Main plans:</p>
+<ul>
+<li>Unified serialization</li>
+<li>ufile, shuffle writer and reader</li>
+<li>Development of Merger and Merger Manager</li>
+<li>Architecture adaptation</li>
+</ul>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://example.com/2023/12/25/RSS-%E8%BF%9C%E7%A8%8BMerge%E7%9A%84%E8%AE%BE%E8%AE%A1EN/" data-id="clqktu7zi0002z7od3m6zgbf2" data-title="RSS-Remote Merge Design" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      
+      
+      
+    </footer>
+  </div>
+  
+    
+<nav id="article-nav">
+  
+    <a href="/2023/12/25/RSS-%E8%BF%9C%E7%A8%8BMerge%E7%9A%84%E8%AE%BE%E8%AE%A1/" id="article-nav-newer" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Newer</strong>
+      <div class="article-nav-title">
+        
+          RSS-远程Merge的设计
+        
+      </div>
+    </a>
+  
+  
+    <a href="/2017/10/22/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-3-2-%E9%9D%9E%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0%E4%B9%8B%E4%B8%BB%E6%88%90%E5%88%86%E5%88%86%E6%9E%90/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">机器学习-3.2-非监督学习之主成分分析.md</div>
+    </a>
+  
+</nav>
+
+  
+</article>
+
+
+</section>
+        
+          <aside id="sidebar">
+  
+    
+
+  
+    
+
+  
+    
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Archives</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2023/12/">December 2023</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/10/">October 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">September 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/08/">August 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/07/">July 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/06/">June 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/05/">May 2017</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Recent Posts</h3>
+    <div class="widget">
+      <ul>
+        
+          <li>
+            <a href="/2023/12/25/RSS-%E8%BF%9C%E7%A8%8BMerge%E7%9A%84%E8%AE%BE%E8%AE%A1/">RSS-远程Merge的设计</a>
+          </li>
+        
+          <li>
+            <a href="/2023/12/25/RSS-%E8%BF%9C%E7%A8%8BMerge%E7%9A%84%E8%AE%BE%E8%AE%A1EN/">RSS-Remote Merge Design</a>
+          </li>
+        
+          <li>
+            <a href="/2017/10/22/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-3-2-%E9%9D%9E%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0%E4%B9%8B%E4%B8%BB%E6%88%90%E5%88%86%E5%88%86%E6%9E%90/">机器学习-3.2-非监督学习之主成分分析.md</a>
+          </li>
+        
+          <li>
+            <a href="/2017/10/15/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-2-8-%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0%E4%B9%8Bk%E8%BF%91%E9%82%BB%E7%AE%97%E6%B3%95/">机器学习-2.8-监督学习之k近邻算法</a>
+          </li>
+        
+          <li>
+            <a href="/2017/09/24/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-3-1-%E9%9D%9E%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0%E4%B9%8B%E8%81%9A%E7%B1%BB/">机器学习-3.1-非监督学习之聚类.md</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+  
+</aside>
+        
+      </div>
+      <footer id="footer">
+  
+  <div class="outer">
+    <div id="footer-info" class="inner">
+      
+      &copy; 2023 zhengchenyu<br>
+      Powered by <a href="https://hexo.io/" target="_blank">Hexo</a>
+    </div>
+  </div>
+</footer>
+
+    </div>
+    <nav id="mobile-nav">
+  
+    <a href="/" class="mobile-nav-link">Home</a>
+  
+    <a href="/archives" class="mobile-nav-link">Archives</a>
+  
+</nav>
+    
+
+
+<script src="/js/jquery-3.6.4.min.js"></script>
+
+
+
+  
+<script src="/fancybox/jquery.fancybox.min.js"></script>
+
+
+
+
+<script src="/js/script.js"></script>
+
+
+
+
+
+  </div>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        tex2jax: {
+            inlineMath: [ ["$","$"], ["\\(","\\)"] ],
+            skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+            processEscapes: true
+        }
+    });
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax();
+        for (var i = 0; i < all.length; ++i)
+            all[i].SourceElement().parentNode.className += ' has-jax';
+    });
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+</body>
+</html>

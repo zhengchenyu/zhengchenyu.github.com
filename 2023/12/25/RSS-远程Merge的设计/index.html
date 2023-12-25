@@ -4,19 +4,23 @@
   <meta charset="utf-8">
   
   
-  <title>RSS 远程Merge的设计 | Hexo</title>
+  <title>RSS-远程Merge的设计 | Hexo</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-  <meta name="description" content="远程Merge的设计">
+  <meta name="description" content="1 默认的shuffle  注: 第一节简单介绍了主流框架默认的shuffle的原理，目的为了梳理逻辑，设计远程Merge。可以选择性阅读。  我们依次对MapReduce, Tez, Spark的shuffle的模型进行分析。  1.1 MapReduce Map将Record写入到内存，当内存超过阈值的时候，会将内存的数据spill到磁盘文件中，按照partitionid+key的顺序依次将">
 <meta property="og:type" content="article">
-<meta property="og:title" content="RSS 远程Merge的设计">
+<meta property="og:title" content="RSS-远程Merge的设计">
 <meta property="og:url" content="http://example.com/2023/12/25/RSS-%E8%BF%9C%E7%A8%8BMerge%E7%9A%84%E8%AE%BE%E8%AE%A1/index.html">
 <meta property="og:site_name" content="Hexo">
-<meta property="og:description" content="远程Merge的设计">
+<meta property="og:description" content="1 默认的shuffle  注: 第一节简单介绍了主流框架默认的shuffle的原理，目的为了梳理逻辑，设计远程Merge。可以选择性阅读。  我们依次对MapReduce, Tez, Spark的shuffle的模型进行分析。  1.1 MapReduce Map将Record写入到内存，当内存超过阈值的时候，会将内存的数据spill到磁盘文件中，按照partitionid+key的顺序依次将">
 <meta property="og:locale" content="en_US">
-<meta property="article:published_time" content="2023-12-25T07:42:57.000Z">
-<meta property="article:modified_time" content="2023-12-25T07:43:53.823Z">
-<meta property="article:author" content="John Doe">
+<meta property="og:image" content="http://example.com/images/rss/remote_merge_by_sub_segment.png">
+<meta property="og:image" content="http://example.com/images/rss/remote_merge_structure.png">
+<meta property="og:image" content="http://example.com/images/rss/remote_merge_ufile_format.png">
+<meta property="article:published_time" content="2023-12-25T10:58:15.000Z">
+<meta property="article:modified_time" content="2023-12-25T11:20:11.435Z">
+<meta property="article:author" content="zhengchenyu">
 <meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/images/rss/remote_merge_by_sub_segment.png">
   
     <link rel="alternate" href="/atom.xml" title="Hexo" type="application/atom+xml">
   
@@ -74,7 +78,7 @@
         <section id="main"><article id="post-RSS-远程Merge的设计" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
   <div class="article-meta">
     <a href="/2023/12/25/RSS-%E8%BF%9C%E7%A8%8BMerge%E7%9A%84%E8%AE%BE%E8%AE%A1/" class="article-date">
-  <time class="dt-published" datetime="2023-12-25T07:42:57.000Z" itemprop="datePublished">2023-12-25</time>
+  <time class="dt-published" datetime="2023-12-25T10:58:15.000Z" itemprop="datePublished">2023-12-25</time>
 </a>
     
   </div>
@@ -85,7 +89,7 @@
         
   
     <h1 class="p-name article-title" itemprop="headline name">
-      RSS 远程Merge的设计
+      RSS-远程Merge的设计
     </h1>
   
 
@@ -93,11 +97,150 @@
     
     <div class="e-content article-entry" itemprop="articleBody">
       
-        <h1 id="远程Merge的设计"><a href="#远程Merge的设计" class="headerlink" title="远程Merge的设计"></a>远程Merge的设计</h1>
+        <h1 id="1-默认的shuffle"><a class="markdownIt-Anchor" href="#1-默认的shuffle"></a> 1 默认的shuffle</h1>
+<blockquote>
+<p>注: 第一节简单介绍了主流框架默认的shuffle的原理，目的为了梳理逻辑，设计远程Merge。可以选择性阅读。</p>
+</blockquote>
+<p>我们依次对MapReduce, Tez, Spark的shuffle的模型进行分析。</p>
+<h2 id="11-mapreduce"><a class="markdownIt-Anchor" href="#11-mapreduce"></a> 1.1 MapReduce</h2>
+<p>Map将Record写入到内存，当内存超过阈值的时候，会将内存的数据spill到磁盘文件中，按照partitionid+key的顺序依次将Record写入到磁盘文件。当Map处理完所有Record后, 会将当前内存中的数据spill到磁盘文件。然后读取所有的spill到磁盘的文件，并按照partitionid+key的顺序进行merge，得到排序的Records。</p>
+<p>Reduce端会从Map端获取对应分区下多组局部排序的Records，然后使用最小堆K路归并排序将这些Records汇聚为一个全局排序的Records。</p>
+<blockquote>
+<p>注: 按照partitionid排序的目的是Reduce端从Map端获取的数据的时候，尽可能顺序读。对于MR、Tez、Spark, 无论是否排序，只要有分区，都需要按照partitionid进行排序。</p>
+</blockquote>
+<h2 id="12-tez"><a class="markdownIt-Anchor" href="#12-tez"></a> 1.2 Tez</h2>
+<p>Tez的情况略微复杂。Tez分为ordered io和unordered io。</p>
+<p>ordered io与MapReduce相同，不再展开分析。</p>
+<p>unordered io一般用于hashjoin等不需要key进行排序的情况。非排序的io采用来之即用方案。Map直接将Record写入文件或者通过缓存在写入文件。Reduce端也是读数据的时候也是读之即用。</p>
+<h2 id="13-spark"><a class="markdownIt-Anchor" href="#13-spark"></a> 1.3 Spark</h2>
+<p>spark的shuffle更复杂，也更合理。部分任务是不需要sort和combine的，因此spark用户可以需求决定shuffle的逻辑。</p>
+<h3 id="131-shuffle写操作"><a class="markdownIt-Anchor" href="#131-shuffle写操作"></a> 1.3.1 Shuffle写操作</h3>
+<p>写shuffle数据的时候，支持三种writer:</p>
+<ul>
+<li>(1) BypassMergeSortShuffleWriter</li>
+</ul>
+<p>为每个partition都生成一个临时文件。在写Record的时候，找到对应的分区直接写入对应的临时文件。然后当所有数据都处理完成后，将这些临时的文件按照分区的顺序依次写入到一个最终的文件，并删除临时文件。</p>
+<ul>
+<li>(2) UnsafeShuffleWriter</li>
+</ul>
+<p>UnsafeShuffleWriter主要通过ShuffleExternalSorter来实现具体的逻辑。当写Record的时候，直接序列化操作，并将序列化的字节拷贝到申请的内存中。同时也会将Record的地址和分区记录到内存中(inMemSorter)。</p>
+<p>当内存的Record达到阈值的时候，会进行spill操作。根据内存(inMemSorter)中的信息，我们很容易得到一个按照分区排序的Record，并写到文件中。</p>
+<p>当处理完所有Record，我们会把当前内存中的Records spill到文件中。最后对所有spilled文件进行一次聚合。由于之前spilled的文件已经是按照分区排序的，所以我们可以按照分区的顺序依次将所有spill的文件的对应自己拷贝到最终文件。这样得到的最终文件即为分区排序的文件。</p>
+<ul>
+<li>(3) SortShuffleWriter</li>
+</ul>
+<p>SortShuffleWriter主要通过ExternalSorter来实现具体逻辑。ExternalSorter根据用户的需求决定是否combine和sort。</p>
+<p>当写Record的时候，会直接插入到内存中。如果需要combine，内存架构是map，否则是buffer。</p>
+<p>如果当前评估内存大于阈值会触发spill操作。spill操作的时候，会将Record，然后spill到磁盘。这个过程是需要进行排序的。而具体的比较器会根据用户需求的不同使用不同的值。如果设置了keyordering会按照key进行排序。如果没有设置keyordering，但是设置了aggregator(即combine)，则按照key的hashcode进行排序，这样保证相同的key组织一起，便于combine操作。如果keyordering和aggregator都没有设置，则会按照partiton进行排序。</p>
+<p>所有Record都写完时，需要读取spill的文件，并合并成一个全局有序的文件。</p>
+<p>三种writer的比较</p>
+<table>
+<thead>
+<tr>
+<th>writer</th>
+<th>优点</th>
+<th>缺点</th>
+<th>场景</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>BypassMergeSortShuffleWriter</td>
+<td>(1) 只经过一次序列化。<br>(2) 采用类hashmap的数据结构，插入数据快。</td>
+<td>(1) 不支持combine和sort <br>(2) 每个分区都要对应生成一个临时文件，会产生过多的临时文件。</td>
+<td>适合分区数较少(默认小于等于200)且没有combine的的情况.</td>
+</tr>
+<tr>
+<td>UnsafeShuffleWriter</td>
+<td>(1) 只经过一次序列化。<br>(2) spill到磁盘的文件数目有限，不再基于分区数，可以支持更大的分区。</td>
+<td>(1) 不支持combine, sort <br>(2) 写入顺序Record顺序会打乱，要求supportsRelocationOfSerializedObjects。</td>
+<td>适用于没有combine的情况，且支持supportsRelocationOfSerializedObjects，并且支持最大支持分区数为16777216。</td>
+</tr>
+<tr>
+<td>SortShuffleWriter</td>
+<td>(1) 支持combine, sort <br> (2) 适合于所有场景 <br> (3)  spill到磁盘的文件数目有限</td>
+<td>(1) 需要进行多次序列化</td>
+<td>适用于所有场景。</td>
+</tr>
+</tbody>
+</table>
+<h3 id="132-shuffle读"><a class="markdownIt-Anchor" href="#132-shuffle读"></a> 1.3.2 shuffle读</h3>
+<p>当前只有BlockStoreShuffleReader一个实现。Reduce首先会拉取数据。根据用户的需求决定是否进行combine。再根据用户的需求据决定是否sort。最后会返回给下游使用。 Reduce端主要将各个Map产生的指定分区的数据进行Merge。这里Merge的过程与SortShuffleWriter对所有spill文件做最后的merge的过程类似，不再详细描述。</p>
+<h2 id="14-总结"><a class="markdownIt-Anchor" href="#14-总结"></a> 1.4 总结</h2>
+<p>我们分析了三种框架，事实上只要实现Spark框架的功能需求，就能满足MapReduce和Tez的要求。</p>
+<p>对于Hadoop MapReduce和Tez的ordered io, 实质就是spark的排序的特例。对于Tez的unordered io，实质上就是spark的非排序的特例。</p>
+<h2 id="2-任务需求分析-哪类任务需要远程merge"><a class="markdownIt-Anchor" href="#2-任务需求分析-哪类任务需要远程merge"></a> 2 任务需求分析: 哪类任务需要远程merge?</h2>
+<p>当前uniffle的map端操作已经不再需要磁盘操作。本文主要考虑reduce端的情况。主要分如下几种情况:</p>
+<ul>
+<li>(1) 对于spark的非排序且非聚集、tez unordered io，Record是来之即用的，不需要有任何的全局的聚合和排序操作，只需要非常少的内存。当前版本的uniffle在内存设置合理的情况下是不会使用磁盘的。使用当前uniffle的方案即可。本文不会讨论这方面的内容。</li>
+<li>(2) 对于spark的排序或聚集任务、tez ordered io、mapreduce，由于需要全局排序或聚集，内存可能不够用，可能会将Record spill到磁盘。本文主要讨论这种情况。根据第一节的讨论，SortShuffleWriter参考意义更大，因为都需要对进行进行反序列化并排序。</li>
+</ul>
+<h2 id="3-方案的选择-为什么选择远程merge的方案"><a class="markdownIt-Anchor" href="#3-方案的选择-为什么选择远程merge的方案"></a> 3 方案的选择: 为什么选择远程merge的方案?</h2>
+<h3 id="31-需要sort的情况"><a class="markdownIt-Anchor" href="#31-需要sort的情况"></a> 3.1 需要sort的情况</h3>
+<h4 id="311-如何排序"><a class="markdownIt-Anchor" href="#311-如何排序"></a> 3.1.1 如何排序</h4>
+<p>对于排序类的操作，一般会在Map进行排序得到一组局部排序的记录，这里称之为segment，然后Reduce会获取所有的segment, 并进行归并。</p>
+<p>那么如何进行归并呢? 这里Spark, MR, Tez都是用了最小堆K路归并排序。我们可以沿用该方案。</p>
+<h2 id="312-在哪里归并"><a class="markdownIt-Anchor" href="#312-在哪里归并"></a> 3.1.2 在哪里归并</h2>
+<p>在那里进行归并是比较关键的，因为这里涉及我们是否会spill或spill到哪里。再次强调我们的目标是避免在任务所在的机器上执行文件操作。</p>
+<p>(1) 在Reduce排序</p>
+<p>为了避免spill到磁盘，仍然可以在Reduce端排序。在Reduce端Merger可以只获取Segment的一小段内容，然后进行归并排序。会按照排序的顺序，按需获取资源，最后形成一个全局排序的Records。</p>
+<img src="/images/rss/remote_merge_by_sub_segment.png" width=50% height=50% text-align=center/>
+<ul>
+<li>优点: shuffle server端不需要key的比较器。</li>
+<li>缺点: 需要维护block的数据信息。</li>
+</ul>
+<p>一般情况下，block数目很多且每个block的数据量不大。因此需要在Reduce端维护大量的block元数据信息，更重要的是这种方案产生了大量IO操作，性能难以保证。因此排除该方案。</p>
+<p>(2) 在shuffle server端排序</p>
+<p>BufferManager和FlushManager维护着block在内存和磁盘中的信息，我们只需要提供一种服务把这些block进行Merge，得到全局排序的Records即可。</p>
+<ul>
+<li>优点: 可以利用shuffle server端已经有的元数据信息。</li>
+<li>缺点: shuffle server端需要获取任务的比较器。</li>
+</ul>
+<p>根据上面的分析，决定使用在shuffle server端排序的方案。</p>
+<h2 id="32-处理需要combine的情况"><a class="markdownIt-Anchor" href="#32-处理需要combine的情况"></a> 3.2 处理需要combine的情况</h2>
+<p>Record按照key排序后，就可以顺序地读取key，因此很容易完成combine的操作。所以，我们如果实现了sort，即实现了combine。</p>
+<p>具体combine如何操作？一般情况下combine的操作是很难标准化的，因此需要避免在shuffle server端做combine操作，而是将combine操作移到reduce端。因此从shuffle server端读取Records可以保证相同的key放在一块。可以使用key的hash值作为排序的依据(注: 非排序的操作是不提供比较器的)，这样我们就可以保证相同的可以放在一起。</p>
+<blockquote>
+<p>注: 其实仍然可以以hashmap对record进行组织。这样看上去效率更高，实则不然。这需要所有的segment加载到内存中，而排序的方案是不需要的。</p>
+</blockquote>
+<h1 id="4-方案设计"><a class="markdownIt-Anchor" href="#4-方案设计"></a> 4 方案设计</h1>
+<h2 id="41-方案简介"><a class="markdownIt-Anchor" href="#41-方案简介"></a> 4.1 方案简介</h2>
+<blockquote>
+<p>UFile表示一个数据集，包含了一组排序的Record。对于Map端直接与现有的Block对应。对于Reduce端，会根据缓存大小来决定UFile的大小。</p>
+</blockquote>
+<img src="/images/rss/remote_merge_structure.png" width=50% height=50% text-align=center/>
+<p>流程如下:</p>
+<ul>
+<li>(1) Map端生产Records, 然后发送给shuffle server。</li>
+<li>(2) shuffle server端会将数据存在缓存中，或者通过flush manager缓存到本地文件系统或远程文件系统。</li>
+<li>(3) shuffle server端增加一个新的merge manager，对每个shuffle进行管理。每个partition下会记录Segment信息，其中在缓存中的我们称为InMemorySegment，在文件中的我们称为OnDiskSegment。其中InMemorySegment内的数据来自于bufferPool, OnDiskSegment中的数据来自于文件。</li>
+<li>(4) 当达到某种条件后，跟根据某种算法对部分segment进行合并，合并的结果会写入到本地文件或远程存储中。</li>
+<li>(5) Reduce端读数据的时候，就是一次Merge Sort的过程。在shuffle server中经过Merge操作后，某一个partition会剩下少数几个经过Merge后的有序文件。我们会根据Merge sort的思路来读取Reduce端要求的文件。</li>
+</ul>
+<blockquote>
+<p>假如只有少数几个segment，我们可以不用将segment merge到一个新的文件，而是进行实时merge即可。</p>
+</blockquote>
+<h2 id="42-如何进行读"><a class="markdownIt-Anchor" href="#42-如何进行读"></a> 4.2 如何进行读？</h2>
+<p>当前uniffle的shuffle reader使用blockid作为读的标记，很容易校验是否得到准确完整的Record。对于远程merge，我们不再使用map段生成的blockid。最准确的语义变成了按照key的顺序读，即下一次读要从上一次读取key的下一个开始读。<br />
+为了加速实现这个语义，我采用了在合并的merge端上加索引的方式进行读取。可以跳过大量的io操作。</p>
+<img src="/images/rss/remote_merge_ufile_format.png" width=50% height=50% text-align=center/>
+<p>写文件的时候，会按照一定的大小划分section，记录每个section的第一个key的值以及section的起始地址和长度，将这些元数据信息写入文件。这样读的时候可以跳过大量的IO操作。</p>
+<blockquote>
+<p>笔者会探索直接记录offset的方式替代该解决该方案。</p>
+</blockquote>
+<h1 id="5-计划"><a class="markdownIt-Anchor" href="#5-计划"></a> 5 计划</h1>
+<p>主要计划:</p>
+<ul>
+<li>统一序列化</li>
+<li>ufile, shuffle writer和reader</li>
+<li>Merger与 Merger Manager开发</li>
+<li>架构适配</li>
+</ul>
+
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2023/12/25/RSS-%E8%BF%9C%E7%A8%8BMerge%E7%9A%84%E8%AE%BE%E8%AE%A1/" data-id="clqknkjay0002atodc4hw4ui1" data-title="RSS 远程Merge的设计" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2023/12/25/RSS-%E8%BF%9C%E7%A8%8BMerge%E7%9A%84%E8%AE%BE%E8%AE%A1/" data-id="clqktu7zg0001z7od3yc8h3d7" data-title="RSS-远程Merge的设计" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -108,9 +251,9 @@
 <nav id="article-nav">
   
   
-    <a href="/2017/10/22/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-3-2-%E9%9D%9E%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0%E4%B9%8B%E4%B8%BB%E6%88%90%E5%88%86%E5%88%86%E6%9E%90/" id="article-nav-older" class="article-nav-link-wrap">
+    <a href="/2023/12/25/RSS-%E8%BF%9C%E7%A8%8BMerge%E7%9A%84%E8%AE%BE%E8%AE%A1EN/" id="article-nav-older" class="article-nav-link-wrap">
       <strong class="article-nav-caption">Older</strong>
-      <div class="article-nav-title">机器学习-3.2-非监督学习之主成分分析.md</div>
+      <div class="article-nav-title">RSS-Remote Merge Design</div>
     </a>
   
 </nav>
@@ -148,7 +291,11 @@
       <ul>
         
           <li>
-            <a href="/2023/12/25/RSS-%E8%BF%9C%E7%A8%8BMerge%E7%9A%84%E8%AE%BE%E8%AE%A1/">RSS 远程Merge的设计</a>
+            <a href="/2023/12/25/RSS-%E8%BF%9C%E7%A8%8BMerge%E7%9A%84%E8%AE%BE%E8%AE%A1/">RSS-远程Merge的设计</a>
+          </li>
+        
+          <li>
+            <a href="/2023/12/25/RSS-%E8%BF%9C%E7%A8%8BMerge%E7%9A%84%E8%AE%BE%E8%AE%A1EN/">RSS-Remote Merge Design</a>
           </li>
         
           <li>
@@ -161,10 +308,6 @@
         
           <li>
             <a href="/2017/09/24/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-3-1-%E9%9D%9E%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0%E4%B9%8B%E8%81%9A%E7%B1%BB/">机器学习-3.1-非监督学习之聚类.md</a>
-          </li>
-        
-          <li>
-            <a href="/2017/09/08/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-2-7-%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0%E4%B9%8B%E6%94%AF%E6%8C%81%E5%90%91%E9%87%8F%E6%9C%BA/">机器学习-2.7-监督学习之支持向量机</a>
           </li>
         
       </ul>
@@ -180,7 +323,7 @@
   <div class="outer">
     <div id="footer-info" class="inner">
       
-      &copy; 2023 John Doe<br>
+      &copy; 2023 zhengchenyu<br>
       Powered by <a href="https://hexo.io/" target="_blank">Hexo</a>
     </div>
   </div>
@@ -214,5 +357,21 @@
 
 
   </div>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        tex2jax: {
+            inlineMath: [ ["$","$"], ["\\(","\\)"] ],
+            skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+            processEscapes: true
+        }
+    });
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax();
+        for (var i = 0; i < all.length; ++i)
+            all[i].SourceElement().parentNode.className += ' has-jax';
+    });
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
 </body>
 </html>
