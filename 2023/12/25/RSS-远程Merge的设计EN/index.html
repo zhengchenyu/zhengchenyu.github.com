@@ -6,18 +6,18 @@
   
   <title>RSS-Remote Merge Design | Hexo</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-  <meta name="description" content="1 Default shuffle  Note: The first chapter briefly introduces the principle of default shuffle, with the purpose of designing remote merge. Reading is optional.  We analyze the shuffle models of MapR">
+  <meta name="description" content="1 Default shuffle  Note: The first chapter briefly introduces the principle of default shuffle, with the purpose of find where local disks are used, then design remote merge. If you know enough, you">
 <meta property="og:type" content="article">
 <meta property="og:title" content="RSS-Remote Merge Design">
 <meta property="og:url" content="http://example.com/2023/12/25/RSS-%E8%BF%9C%E7%A8%8BMerge%E7%9A%84%E8%AE%BE%E8%AE%A1EN/index.html">
 <meta property="og:site_name" content="Hexo">
-<meta property="og:description" content="1 Default shuffle  Note: The first chapter briefly introduces the principle of default shuffle, with the purpose of designing remote merge. Reading is optional.  We analyze the shuffle models of MapR">
+<meta property="og:description" content="1 Default shuffle  Note: The first chapter briefly introduces the principle of default shuffle, with the purpose of find where local disks are used, then design remote merge. If you know enough, you">
 <meta property="og:locale" content="en_US">
 <meta property="og:image" content="http://example.com/images/rss/remote_merge_by_sub_segment.png">
 <meta property="og:image" content="http://example.com/images/rss/remote_merge_structure.png">
 <meta property="og:image" content="http://example.com/images/rss/remote_merge_ufile_format.png">
 <meta property="article:published_time" content="2023-12-25T10:58:15.000Z">
-<meta property="article:modified_time" content="2023-12-25T11:20:22.621Z">
+<meta property="article:modified_time" content="2023-12-26T03:19:19.949Z">
 <meta property="article:author" content="zhengchenyu">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:image" content="http://example.com/images/rss/remote_merge_by_sub_segment.png">
@@ -99,15 +99,15 @@
       
         <h1 id="1-default-shuffle"><a class="markdownIt-Anchor" href="#1-default-shuffle"></a> 1 Default shuffle</h1>
 <blockquote>
-<p>Note: The first chapter briefly introduces the principle of default shuffle, with the purpose of designing remote merge. Reading is optional.</p>
+<p>Note: The first chapter briefly introduces the principle of default shuffle, with the purpose of find where local disks are used, then design remote merge. If you know enough, you can ignore this part.</p>
 </blockquote>
-<p>We analyze the shuffle models of MapReduce, Tez, and Spark in turn.</p>
+<p>We will analyze the shuffle of MapReduce, Tez, and Spark in turn.</p>
 <h2 id="11-mapreduce"><a class="markdownIt-Anchor" href="#11-mapreduce"></a> 1.1 MapReduce</h2>
 <p>Map writes the record to the memory. When the memory exceeds the threshold, the memory data is spilled to the disk file, and the Record is written to the disk file in order of partitionid+key. After Map has processed all records, it will spill the data currently in memory to a disk file. Then read all the files spilled to the disk and merge them in the order of partitionid+key to get the sorted Records.</p>
-<p>The Reduce will obtain multiple sets of locally sorted Records under the corresponding partition from the Map, then use the minimum heap K-way merge sort to aggregate these Records into one globally sorted Records.</p>
 <blockquote>
 <p>Note: The purpose of sorting according to partitionid is that when the Reduce side obtains the data from the Map side, it should be read as sequentially as possible. For MR, Tez, and Spark, regardless of whether they are sorted or not, as long as there are partitioned, they need to be sorted according to partitionid.</p>
 </blockquote>
+<p>The reduce will pull the records of the corresponding partition remotely or locally from the Map, which is called MapOutput. Under normal circumstances, the memory will be used directly. If the memory exceeds the threshold, these records will be written to the disk. Then the reduce will perform merge operations on MapOutputs using minimum heap K-way merge sorting to obtain globally sorted records. During the Merge process, temporary results may be spilled to disk because the memory exceeds the threshold. In addition, if there are too many files spilled to disk, additional merges will be triggered.</p>
 <h2 id="12-tez"><a class="markdownIt-Anchor" href="#12-tez"></a> 1.2 Tez</h2>
 <p>There are two cases of tez: (1) ordered io  (2) unordered io.</p>
 <p>Ordered io is the same as MapReduce and so ignore it here.</p>
@@ -172,10 +172,22 @@ Comparison of three writers</p>
 </tbody>
 </table>
 <h3 id="132-shuffle-read"><a class="markdownIt-Anchor" href="#132-shuffle-read"></a> 1.3.2 shuffle read</h3>
-<p>Currently there is only one implementation of BlockStoreShuffleReader. Reduce will first pull the data. Decide whether to combine based on user needs. Then decide whether to sort based on the user’s needs. Finally, it will be returned to downstream. The Reduce side mainly merges the data of the specified partitions generated by each Map. The Merge process here is similar to the final merge process of all spill files by SortShuffleWriter, and will not be described in detail.</p>
+<p>Currently there is only one implementation of BlockStoreShuffleReader. The implementation is similar to MapReduce.<br />
+The reduce will pull the records of the corresponding partition remotely or locally from the map. Under normal circumstances, it will be written directly to the memory, but if the block size to be obtained exceeds the threshold, will use disk.<br />
+Then it will be decided according to the user’s needs whether to combine or sort, and finally form a record iterator required by the user.<br />
+Combine and sort use ExternalAppendOnlyMap and ExternalSorter respectively. When the memory exceeds the threshold, the data will be spilled to the local disk.</p>
 <h2 id="14-summary"><a class="markdownIt-Anchor" href="#14-summary"></a> 1.4 Summary</h2>
-<p>We analyzed three frameworks. In fact, as long as the functional requirements of the Spark framework are implemented, the requirements of MapReduce and Tez can be met.</p>
-<p>For Hadoop MapReduce and Tez’s ordered io, it is essentially a special case of spark sorting. For Tez’s unordered io, it is essentially a special case of spark’s non-sorting.</p>
+<p>(1) About the semantics of each framework</p>
+<p>For MapReduce and the ordered io of Tez, it is a special case of spark sorting. For Tez’s unordered io, it is essentially a special case of spark’s non-sorting. In essence, the semantics of each framework are the same, and spark is more general.</p>
+<p>(2) Where will generate local disk files?</p>
+<p>After analyzing the three computing frameworks, we learned that the following processes will use disks:</p>
+<ul>
+<li>(1) Map may generate intermediate temporary files because the memory exceeds the threshold.</li>
+<li>(2) The map will eventually generate disk files to provide shuffle services.</li>
+<li>(3) When reduce pulls records, disk files may be generated because the threshold is exceeded.</li>
+<li>(4) When merging on the reduce side, temporary disk files may be generated for global sorting.</li>
+</ul>
+<p>In fact, uniffle has solved (1), (2). For (3), if the parameters are adjusted effectively, it is difficult to generate disk files. In fact, only (4) needs to be discussed in this article.</p>
 <h2 id="2-task-requirement-analysis-what-types-of-tasks-require-remote-merge"><a class="markdownIt-Anchor" href="#2-task-requirement-analysis-what-types-of-tasks-require-remote-merge"></a> 2 Task requirement analysis: What types of tasks require remote merge?</h2>
 <p>Currently, uniffle’s map-side operations no longer require disk operations. This article mainly considers the situation on the reduce side. Mainly divided into the following situations:</p>
 <ul>
@@ -187,7 +199,7 @@ Comparison of three writers</p>
 <h4 id="311-how-to-sort"><a class="markdownIt-Anchor" href="#311-how-to-sort"></a> 3.1.1 How to sort</h4>
 <p>For sorting operations, Map will generally be sorted to obtain a set of partially sorted records, here called segments, and then reduce will obtain all segments and merge them.</p>
 <p>So how to merge? Here Spark, MR, and Tez all use minimum heap K-way merge sorting. We can continue this approach.</p>
-<h2 id="312-where-to-merge"><a class="markdownIt-Anchor" href="#312-where-to-merge"></a> 3.1.2 Where to merge</h2>
+<h4 id="312-where-to-merge"><a class="markdownIt-Anchor" href="#312-where-to-merge"></a> 3.1.2 Where to merge</h4>
 <p>Merging there is more critical, because it involves whether or where we will spill. Again our goal is to avoid performing file operations on the same machine as the task.</p>
 <p>(1) Sort in Reduce</p>
 <p>To avoid spilling to disk, sorting can still be done on the reduce side. On the reduce side, Merger can only obtain a small portion of the Segment content, and then perform merge sorting. Resources will be obtained on demand according to the sorted order, and finally a globally sorted Records will be formed.</p>
@@ -204,7 +216,12 @@ Comparison of three writers</p>
 <li>Disadvantage: The shuffle server needs to obtain the comparator of the task.</li>
 </ul>
 <p>Based on the above analysis, it was decided to use the scheme of sorting on the shuffle server side.</p>
-<p>​</p>
+<h2 id="32-handling-situations-that-require-combine"><a class="markdownIt-Anchor" href="#32-handling-situations-that-require-combine"></a> 3.2 Handling situations that require combine</h2>
+<p>After the Record is sorted by key, the keys can be read sequentially, so it is easy to complete the combine operation.</p>
+<p>How does combine operate? In general, combine operations are difficult to standardize, so it is necessary to avoid doing combine operations on the shuffle server side and move the combine operations to the reduce side. Therefore, when reading Records from the shuffle server, it is necessary to ensure that the same keys are placed together. We can use the hash value of the key as the basis for sorting (Note: Comparators are not provided for non-sorting operations), so that we can ensure that the same keys can be put together.</p>
+<blockquote>
+<p>Note: In fact, records can still be organized using hashmap. This may seem more efficient, but it is not. This requires all segments to be loaded into memory, which the sorting scheme does not require.</p>
+</blockquote>
 <h1 id="4-scheme-design"><a class="markdownIt-Anchor" href="#4-scheme-design"></a> 4 Scheme Design</h1>
 <h2 id="41-solution-introduction"><a class="markdownIt-Anchor" href="#41-solution-introduction"></a> 4.1 Solution introduction</h2>
 <blockquote>
@@ -242,7 +259,7 @@ Comparison of three writers</p>
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2023/12/25/RSS-%E8%BF%9C%E7%A8%8BMerge%E7%9A%84%E8%AE%BE%E8%AE%A1EN/" data-id="clqktu7zi0002z7od3m6zgbf2" data-title="RSS-Remote Merge Design" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2023/12/25/RSS-%E8%BF%9C%E7%A8%8BMerge%E7%9A%84%E8%AE%BE%E8%AE%A1EN/" data-id="clqls88c40003zlodeld3cksp" data-title="RSS-Remote Merge Design" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       

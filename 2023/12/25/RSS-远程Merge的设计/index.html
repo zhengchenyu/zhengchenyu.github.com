@@ -6,18 +6,18 @@
   
   <title>RSS-远程Merge的设计 | Hexo</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-  <meta name="description" content="1 默认的shuffle  注: 第一节简单介绍了主流框架默认的shuffle的原理，目的为了梳理逻辑，设计远程Merge。可以选择性阅读。  我们依次对MapReduce, Tez, Spark的shuffle的模型进行分析。  1.1 MapReduce Map将Record写入到内存，当内存超过阈值的时候，会将内存的数据spill到磁盘文件中，按照partitionid+key的顺序依次将">
+  <meta name="description" content="1 默认的shuffle  注: 第一节简单介绍了主流框架默认的shuffle的原理，目的为了那里会使用本地磁盘，从而设计远程Merge。如果足够了解，可以忽略这部分内容。  我们依次对MapReduce, Tez, Spark的shuffle进行分析。  1.1 MapReduce Map将Record写入到内存，当内存超过阈值的时候，会将内存的数据spill到磁盘文件中，按照partitio">
 <meta property="og:type" content="article">
 <meta property="og:title" content="RSS-远程Merge的设计">
 <meta property="og:url" content="http://example.com/2023/12/25/RSS-%E8%BF%9C%E7%A8%8BMerge%E7%9A%84%E8%AE%BE%E8%AE%A1/index.html">
 <meta property="og:site_name" content="Hexo">
-<meta property="og:description" content="1 默认的shuffle  注: 第一节简单介绍了主流框架默认的shuffle的原理，目的为了梳理逻辑，设计远程Merge。可以选择性阅读。  我们依次对MapReduce, Tez, Spark的shuffle的模型进行分析。  1.1 MapReduce Map将Record写入到内存，当内存超过阈值的时候，会将内存的数据spill到磁盘文件中，按照partitionid+key的顺序依次将">
+<meta property="og:description" content="1 默认的shuffle  注: 第一节简单介绍了主流框架默认的shuffle的原理，目的为了那里会使用本地磁盘，从而设计远程Merge。如果足够了解，可以忽略这部分内容。  我们依次对MapReduce, Tez, Spark的shuffle进行分析。  1.1 MapReduce Map将Record写入到内存，当内存超过阈值的时候，会将内存的数据spill到磁盘文件中，按照partitio">
 <meta property="og:locale" content="en_US">
 <meta property="og:image" content="http://example.com/images/rss/remote_merge_by_sub_segment.png">
 <meta property="og:image" content="http://example.com/images/rss/remote_merge_structure.png">
 <meta property="og:image" content="http://example.com/images/rss/remote_merge_ufile_format.png">
 <meta property="article:published_time" content="2023-12-25T10:58:15.000Z">
-<meta property="article:modified_time" content="2023-12-25T11:20:11.435Z">
+<meta property="article:modified_time" content="2023-12-26T03:19:53.658Z">
 <meta property="article:author" content="zhengchenyu">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:image" content="http://example.com/images/rss/remote_merge_by_sub_segment.png">
@@ -99,15 +99,15 @@
       
         <h1 id="1-默认的shuffle"><a class="markdownIt-Anchor" href="#1-默认的shuffle"></a> 1 默认的shuffle</h1>
 <blockquote>
-<p>注: 第一节简单介绍了主流框架默认的shuffle的原理，目的为了梳理逻辑，设计远程Merge。可以选择性阅读。</p>
+<p>注: 第一节简单介绍了主流框架默认的shuffle的原理，目的为了那里会使用本地磁盘，从而设计远程Merge。如果足够了解，可以忽略这部分内容。</p>
 </blockquote>
-<p>我们依次对MapReduce, Tez, Spark的shuffle的模型进行分析。</p>
+<p>我们依次对MapReduce, Tez, Spark的shuffle进行分析。</p>
 <h2 id="11-mapreduce"><a class="markdownIt-Anchor" href="#11-mapreduce"></a> 1.1 MapReduce</h2>
 <p>Map将Record写入到内存，当内存超过阈值的时候，会将内存的数据spill到磁盘文件中，按照partitionid+key的顺序依次将Record写入到磁盘文件。当Map处理完所有Record后, 会将当前内存中的数据spill到磁盘文件。然后读取所有的spill到磁盘的文件，并按照partitionid+key的顺序进行merge，得到排序的Records。</p>
-<p>Reduce端会从Map端获取对应分区下多组局部排序的Records，然后使用最小堆K路归并排序将这些Records汇聚为一个全局排序的Records。</p>
 <blockquote>
 <p>注: 按照partitionid排序的目的是Reduce端从Map端获取的数据的时候，尽可能顺序读。对于MR、Tez、Spark, 无论是否排序，只要有分区，都需要按照partitionid进行排序。</p>
 </blockquote>
+<p>Reduce端会从Map端以远程或本地的方式拉取对应分区的Records，称之为MapOutput。正常情况下会直接使用内存，如果内存超过阈值会将这些Records写入到磁盘。然后Reduce端会对所有MapOutput使用最小堆K路归并排序进行一些Merge操作，得到全局排序的Reccords。Merge的过程中，可能会因为内存超过阈值，会将临时的结果spill到磁盘。另外如果spill到磁盘的文件过多，也会触发额外的merge。</p>
 <h2 id="12-tez"><a class="markdownIt-Anchor" href="#12-tez"></a> 1.2 Tez</h2>
 <p>Tez的情况略微复杂。Tez分为ordered io和unordered io。</p>
 <p>ordered io与MapReduce相同，不再展开分析。</p>
@@ -165,10 +165,22 @@
 </tbody>
 </table>
 <h3 id="132-shuffle读"><a class="markdownIt-Anchor" href="#132-shuffle读"></a> 1.3.2 shuffle读</h3>
-<p>当前只有BlockStoreShuffleReader一个实现。Reduce首先会拉取数据。根据用户的需求决定是否进行combine。再根据用户的需求据决定是否sort。最后会返回给下游使用。 Reduce端主要将各个Map产生的指定分区的数据进行Merge。这里Merge的过程与SortShuffleWriter对所有spill文件做最后的merge的过程类似，不再详细描述。</p>
+<p>当前只有BlockStoreShuffleReader一个实现。实现与MapReduce类似。<br />
+Reduce端会从Map端以远程或本地的方式拉取对应分区的Records。正常情况下会直接写到内存中，但如果要获取的block大小超过阈值则会使用磁盘。<br />
+然后会根据用户的需求决定是否进行combine或sort，最终形成一个用户要求的record iterator。<br />
+combine和sort分别使用了ExternalAppendOnlyMap和ExternalSorter，当内存超过阈值后，会将数据spill到本地磁盘中。</p>
 <h2 id="14-总结"><a class="markdownIt-Anchor" href="#14-总结"></a> 1.4 总结</h2>
-<p>我们分析了三种框架，事实上只要实现Spark框架的功能需求，就能满足MapReduce和Tez的要求。</p>
-<p>对于Hadoop MapReduce和Tez的ordered io, 实质就是spark的排序的特例。对于Tez的unordered io，实质上就是spark的非排序的特例。</p>
+<p>(1) 关于各个框架语义</p>
+<p>对于MapReduce和Tez的ordered io, 实质就是spark的排序的特例。对于Tez的unordered io，实质上就是spark的非排序的特例。实质各个框架上语义是相同的, spark更加泛化。</p>
+<p>(2) 哪里会产生本地磁盘文件?</p>
+<p>分析三种计算框架后，我们得知如下过程会使用磁盘:</p>
+<ul>
+<li>(1) Map由于内存超越阈值，可能会产生中间的临时文件。</li>
+<li>(2) Map端最终必然会产生磁盘文件，用于提供shuffle服务。</li>
+<li>(3) Reduce拉取records时候，可能因为超越阈值，产生磁盘文件。</li>
+<li>(4) Reduce端Merge的时候，可能会产生临时的磁盘文件，用于全局排序。</li>
+</ul>
+<p>而事实上, uniffle已经解决(1), (2)。对于(3), 如果有效的调整参数，是很难产生磁盘文件的。事实上只有(4)是本文需要讨论的。</p>
 <h2 id="2-任务需求分析-哪类任务需要远程merge"><a class="markdownIt-Anchor" href="#2-任务需求分析-哪类任务需要远程merge"></a> 2 任务需求分析: 哪类任务需要远程merge?</h2>
 <p>当前uniffle的map端操作已经不再需要磁盘操作。本文主要考虑reduce端的情况。主要分如下几种情况:</p>
 <ul>
@@ -180,7 +192,7 @@
 <h4 id="311-如何排序"><a class="markdownIt-Anchor" href="#311-如何排序"></a> 3.1.1 如何排序</h4>
 <p>对于排序类的操作，一般会在Map进行排序得到一组局部排序的记录，这里称之为segment，然后Reduce会获取所有的segment, 并进行归并。</p>
 <p>那么如何进行归并呢? 这里Spark, MR, Tez都是用了最小堆K路归并排序。我们可以沿用该方案。</p>
-<h2 id="312-在哪里归并"><a class="markdownIt-Anchor" href="#312-在哪里归并"></a> 3.1.2 在哪里归并</h2>
+<h4 id="312-在哪里归并"><a class="markdownIt-Anchor" href="#312-在哪里归并"></a> 3.1.2 在哪里归并</h4>
 <p>在那里进行归并是比较关键的，因为这里涉及我们是否会spill或spill到哪里。再次强调我们的目标是避免在任务所在的机器上执行文件操作。</p>
 <p>(1) 在Reduce排序</p>
 <p>为了避免spill到磁盘，仍然可以在Reduce端排序。在Reduce端Merger可以只获取Segment的一小段内容，然后进行归并排序。会按照排序的顺序，按需获取资源，最后形成一个全局排序的Records。</p>
@@ -199,7 +211,7 @@
 <p>根据上面的分析，决定使用在shuffle server端排序的方案。</p>
 <h2 id="32-处理需要combine的情况"><a class="markdownIt-Anchor" href="#32-处理需要combine的情况"></a> 3.2 处理需要combine的情况</h2>
 <p>Record按照key排序后，就可以顺序地读取key，因此很容易完成combine的操作。所以，我们如果实现了sort，即实现了combine。</p>
-<p>具体combine如何操作？一般情况下combine的操作是很难标准化的，因此需要避免在shuffle server端做combine操作，而是将combine操作移到reduce端。因此从shuffle server端读取Records可以保证相同的key放在一块。可以使用key的hash值作为排序的依据(注: 非排序的操作是不提供比较器的)，这样我们就可以保证相同的可以放在一起。</p>
+<p>具体combine如何操作？一般情况下combine的操作是很难标准化的，因此需要避免在shuffle server端做combine操作，而是将combine操作移到reduce端。因此从shuffle server端读取Records需要保证相同的key放在一块。可以使用key的hash值作为排序的依据(注: 非排序的操作是不提供比较器的)，这样我们就可以保证相同的key可以放在一起。</p>
 <blockquote>
 <p>注: 其实仍然可以以hashmap对record进行组织。这样看上去效率更高，实则不然。这需要所有的segment加载到内存中，而排序的方案是不需要的。</p>
 </blockquote>
@@ -240,7 +252,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2023/12/25/RSS-%E8%BF%9C%E7%A8%8BMerge%E7%9A%84%E8%AE%BE%E8%AE%A1/" data-id="clqktu7zg0001z7od3yc8h3d7" data-title="RSS-远程Merge的设计" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2023/12/25/RSS-%E8%BF%9C%E7%A8%8BMerge%E7%9A%84%E8%AE%BE%E8%AE%A1/" data-id="clqls88c10001zlod8km3g5vk" data-title="RSS-远程Merge的设计" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
