@@ -18,7 +18,7 @@ hexo n "title"
 # 修改../MyBlog
 hexo clean
 hexo g		# 生成
-heox s		# 启动本地server调试
+hexo s		# 启动本地server调试
 hexo d		# 发布到github
 
 # 3 支持数学公式

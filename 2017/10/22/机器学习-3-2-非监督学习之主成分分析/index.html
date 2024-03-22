@@ -17,7 +17,7 @@
 <meta property="og:image" content="http://example.com/images/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/PCA%E9%99%8D%E7%BB%B4%E7%A4%BA%E4%BE%8B.png">
 <meta property="og:image" content="http://example.com/images/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/PCA%E6%89%8B%E5%86%99%E6%95%B0%E5%AD%97%E4%B8%89%E7%BB%B4%E5%B1%95%E7%A4%BA%E5%9B%BE.png">
 <meta property="article:published_time" content="2017-10-22T07:56:23.000Z">
-<meta property="article:modified_time" content="2023-12-25T07:39:18.777Z">
+<meta property="article:modified_time" content="2024-03-18T06:05:52.424Z">
 <meta property="article:author" content="zhengchenyu">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:image" content="http://example.com/images/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/PCA%E9%A9%BE%E9%A9%B6%E5%91%98%E6%8A%80%E8%83%BD%E5%85%B4%E8%B6%A3%E5%85%B3%E7%B3%BB%E6%9B%B2%E7%BA%BF.png">
@@ -121,27 +121,37 @@ $$\frac{1}{m}\sum\limits _{i = 1}^m {{{({x^{{{(i)}^T}}}u)}^2}}  = \frac{1}{m}\su
 
 <p>问题也就转变为找到一组\(u\)使得，上式最大的问题。然后我们假定\(u\)为一组标准正交基，因此\(||u||=1\)。因此问题可写为如下形式：</p>
 
-$$\begin{gathered}   & \max {u^T}(\frac{1}{m}\sum\limits _{i = 1}^m {{x^{(i)}}{x^{{{(i)}^T}}}} )u \hfill \\\  s.t.: & ||u|| = 1 \hfill \\\ \end{gathered} $$
+$$\begin{gathered}
+   & \max {u^T}(\frac{1}{m}\sum\limits _{i = 1}^m {{x^{(i)}}{x^{{{(i)}^T}}}} )u \hfill \\\
+  s.t.: & ||u|| = 1 \hfill \\\ 
+\end{gathered} $$
 
 <p>组成其拉格朗日函数如下：</p>
 
 $$L(u,\lambda ) = {u^T}(\frac{1}{m}\sum\limits _{i = 1}^m {x^{(i)}x^{(i)^T}} )u - \lambda (||u|| - 1)$$
 
 <p>这里我们设\(\Sigma=\frac{1}{m}\sum\limits _{i = 1}^m {x<sup>{(i)}{x</sup>{(i)^T}}}\)，然后对\(u\)求导数，易得:</p>
-$${\nabla _u}L(u,\lambda ) = \sum u - \lambda u = 0$$
+
+$${\nabla _u}L(u,\lambda ) = \sum u - \lambda u = 0$$
+
 <p>因此，我们知道\(\lambda\)为\(\Sigma\)的特征值，\(u\)为对应的特征向量。恰好为我们要求的向量\(u\)。得到一组新的正交基后，我们就可以映射到新的空间中了。具体如下:</p>
 
 $${y^{(i)}} = {(u _1^T{x^{(i)}},u _2^T{x^{(i)}},...,u _k^T{x^{(i)}})^T}$$
+
 <h2 id="2-pca的奇异值分解"><a class="markdownIt-Anchor" href="#2-pca的奇异值分解"></a> 2. PCA的奇异值分解</h2>
 <p>由于一般为\(n*n\)的维度，因此往往是一个很大的矩阵。对于维度很大，样本数目要少于维度很多的数据，这样计算往往有不够划算。因此我们可以通过求解\(x\)的特征值的方法来求节\(\Sigma\)的特征向量。</p>
 <blockquote>
 <p>由于求矩阵的单位特征向量，可以不考虑1/m这个系数。</p>
 </blockquote>
 <p>假如对\(x\)进行奇异值分解，其中\(U\)和\(V\)均为酉阵，\(\Lambda\)为对角阵。另外值得注意的是酉阵的可逆矩阵与转置矩阵相同。具体分解形式如下：</p>
-$$x = U\Lambda {V^T}$$
+
+$$x = U\Lambda {V^T}$$
 
 <p>因此可以得到：</p>
-$$\Sigma  = x{x^T} = U\Lambda {V^T}V\Lambda {U^T} = U{\Lambda ^2}{U^T}$$$$\Sigma U = {\Lambda ^2}{U^T}$$
+
+$$\Sigma  = x{x^T} = U\Lambda {V^T}V\Lambda {U^T} = U{\Lambda ^2}{U^T}$$
+$$\Sigma U = {\Lambda ^2}{U^T}$$
+
 <p>因此可以知道\(\Sigma\)的特征向量对应着\(x\)的奇异值分解中的\(U\)。同时\(\Sigma\)的特征值为\(x\)的奇异值的平方。</p>
 <h2 id="3-源码实现"><a class="markdownIt-Anchor" href="#3-源码实现"></a> 3 源码实现</h2>
 <p>我们对k临近算法中的手写数字识别做分析。我们首先对数字映射到三维空间中，然后进行展示。然后在映射到样本数量维度的空间，实现对数字的识别。值得一提是，PCA可以将多种无法直接展示的多维数组转化为三维数据，然后更直观地进行分析。</p>
