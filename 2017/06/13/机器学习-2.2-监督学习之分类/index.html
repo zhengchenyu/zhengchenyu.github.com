@@ -6,12 +6,12 @@
   
   <title>机器学习 2.2 监督学习之逻辑回归 | Hexo</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-  <meta name="description" content="监督学习 本章继续研究监督学习的问题。  1 回归问题 我们随机制造一个样本空间\({x _2} \geqslant 2{x _1} + 1\)，对于对空间进行分类。具体例子如下：  对于这些样本，假定可以通过二维线性曲线进行分类。然后模拟出某条曲线，使样本得到一个很好的分类。 这个分类问题的样本的y值只有0或1(0-1分布或伯努利分布)，即表示在直线上面或直线下面。如果用之前的线性回归结果将">
+  <meta name="description" content="监督学习 本章继续研究监督学习的问题。 1 回归问题 我们随机制造一个样本空间\({x _2} \geqslant 2{x _1} + 1\)，对于对空间进行分类。具体例子如下：  对于这些样本，假定可以通过二维线性曲线进行分类。然后模拟出某条曲线，使样本得到一个很好的分类。 这个分类问题的样本的y值只有0或1(0-1分布或伯努利分布)，即表示在直线上面或直线下面。如果用之前的线性回归结果将非常">
 <meta property="og:type" content="article">
 <meta property="og:title" content="机器学习 2.2 监督学习之逻辑回归">
 <meta property="og:url" content="http://example.com/2017/06/13/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-2.2-%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0%E4%B9%8B%E5%88%86%E7%B1%BB/index.html">
 <meta property="og:site_name" content="Hexo">
-<meta property="og:description" content="监督学习 本章继续研究监督学习的问题。  1 回归问题 我们随机制造一个样本空间\({x _2} \geqslant 2{x _1} + 1\)，对于对空间进行分类。具体例子如下：  对于这些样本，假定可以通过二维线性曲线进行分类。然后模拟出某条曲线，使样本得到一个很好的分类。 这个分类问题的样本的y值只有0或1(0-1分布或伯努利分布)，即表示在直线上面或直线下面。如果用之前的线性回归结果将">
+<meta property="og:description" content="监督学习 本章继续研究监督学习的问题。 1 回归问题 我们随机制造一个样本空间\({x _2} \geqslant 2{x _1} + 1\)，对于对空间进行分类。具体例子如下：  对于这些样本，假定可以通过二维线性曲线进行分类。然后模拟出某条曲线，使样本得到一个很好的分类。 这个分类问题的样本的y值只有0或1(0-1分布或伯努利分布)，即表示在直线上面或直线下面。如果用之前的线性回归结果将非常">
 <meta property="og:locale" content="en_US">
 <meta property="og:image" content="http://example.com/images/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0-%E5%88%86%E7%B1%BB%E9%97%AE%E9%A2%98%E6%A0%B7%E6%9C%AC.png">
 <meta property="og:image" content="http://example.com/images/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0-%E5%88%86%E7%B1%BB%E9%97%AE%E9%A2%98%E8%BE%85%E5%8A%A9%E5%87%BD%E6%95%B0.png">
@@ -101,9 +101,9 @@
     <div class="e-content article-entry" itemprop="articleBody">
       
         <script type="text/javascript" src="/Users/zcy/Desktop/study/git/MathJax-master/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-<h1 id="监督学习"><a class="markdownIt-Anchor" href="#监督学习"></a> 监督学习</h1>
+<h1>监督学习</h1>
 <p>本章继续研究监督学习的问题。</p>
-<h2 id="1-回归问题"><a class="markdownIt-Anchor" href="#1-回归问题"></a> 1 回归问题</h2>
+<h2 id="1-回归问题">1 回归问题</h2>
 <p>我们随机制造一个样本空间\({x _2} \geqslant 2{x _1} + 1\)，对于对空间进行分类。具体例子如下：</p>
 <img src="/images/机器学习/监督学习-分类问题样本.png" width=50% height=50% text-align=center/>
 <p>对于这些样本，假定可以通过二维线性曲线进行分类。然后模拟出某条曲线，使样本得到一个很好的分类。</p>
@@ -118,7 +118,7 @@ $$h(z) = \frac{1}{{1 + {e^{ - z}}}}$$
 $$z = {\theta _1}{x _1} + {\theta _0}{x _0} + {\theta _2}{x _2} = {\theta ^T}x$$
 
 <p>其中,\({x _0} = 1\)，\({\theta _2} =  - 1\)。</p>
-<h2 id="2-回归问题推导"><a class="markdownIt-Anchor" href="#2-回归问题推导"></a> 2 回归问题推导</h2>
+<h2 id="2-回归问题推导">2 回归问题推导</h2>
 <p>我们求辅助函数的导数，以备后来使用：</p>
 
 $$h'(z) = (\frac{1}{{1 + {e^{ - z}}}})' =  - \frac{{ - {e^{ - z}}}}{{{{(1 + {e^{ - z}})}^2}}} = \frac{1}{{1 + {e^{ - z}}}}(1 - 1 + {e^{ - z}}) = h(z)(1 - h(z))$$
@@ -145,7 +145,7 @@ $$L(\theta ) = \prod\limits _{i = 1}^m {{h _\theta }{{(x{}^i)}^{{y^i}}}{{(1 - {h
 
 $$\ell ({\theta _j}) = \frac{{\partial \ln (L(\theta ))}}{{\partial {\theta _j}}} = \frac{\partial } {{\partial {\theta _j}}}(\sum\limits _{i = 1}^m {({y^i}\ln ({h _\theta }(x{}^i)) + (1 - {y^i})} \ln (1 - {h _\theta }(x{}^i))))$$ 
 
-<p>我们使用一个辅助函数\(z = {\theta ^T}x\), 并且\(\ln x\)的倒数是\(\frac{1}{x}\)。<br />
+<p>我们使用一个辅助函数\(z = {\theta ^T}x\), 并且\(\ln x\)的倒数是\(\frac{1}{x}\)。<br>
 又由于复合函数有如下求导法则：</p>
 
 $$\frac{{df(g(x))}}{{dx}} = \frac{{df(z)}}{{dz}}g(x)'$$
@@ -166,7 +166,7 @@ $$\ell ({\theta _j}) = \sum\limits _{i = 1}^m {(x _j^i(y - {h _\theta }({x^i})))
 
 $${\theta _j} = {\theta _j} + \alpha \sum\limits _{i = 1}^m {(x _j^i(y - {h _\theta }({x^i})))} $$
 
-<h2 id="3-代码"><a class="markdownIt-Anchor" href="#3-代码"></a> 3 代码</h2>
+<h2 id="3-代码">3 代码</h2>
 <p>从这一章开始讲代码从matlab转化更为通用的python。</p>
 <p>我们选取合适的步长，当\(J({\theta})\)小于合适的阈值(这里配置为4)，就认为迭代完成。分类代码如下:</p>
 <pre><code>import random
@@ -262,7 +262,7 @@ if __name__== &quot;__main__&quot;:
 <p>经过数论迭代分析，得到\( \theta _0 = 2.7841420917875297 \)，\( \theta _1 = 4.850051144306185 \)。</p>
 <p>得到如下结果:</p>
 <img src="/images/机器学习/监督学习-分类问题计算结果1.png" width=50% height=50% text-align=center/>
-<h2 id="4-代码的改进"><a class="markdownIt-Anchor" href="#4-代码的改进"></a> 4 代码的改进</h2>
+<h2 id="4-代码的改进">4 代码的改进</h2>
 <p>经过试验发现上面的算法的问题是如果选取合适的阈值。这里将算法修改为两次的\(J({\theta})\)的差值小于0.00001，这样就任务函数已经几近收敛,然后结束迭代。另外，如果\(J({\theta})\)的值某一次迭代增大了,说明算法异常或者迭代参数设置过大。修改后的代码如下:</p>
 <pre><code>  while 1:                                                                             
     j = J(x0_arr, x1_arr, x2_arr, y_arr, xita)                                         
@@ -279,8 +279,8 @@ if __name__== &quot;__main__&quot;:
 </code></pre>
 <p>得到如下结果:</p>
 <img src="/images/机器学习/监督学习-分类问题计算结果2.png" width=50% height=50% text-align=center/>
-<h2 id="5-牛顿法改进"><a class="markdownIt-Anchor" href="#5-牛顿法改进"></a> 5 牛顿法改进</h2>
-<p>这里说明另外一种快速求值的方法，牛顿法。<br />
+<h2 id="5-牛顿法改进">5 牛顿法改进</h2>
+<p>这里说明另外一种快速求值的方法，牛顿法。<br>
 <img src="/images/机器学习/牛顿法示意图.png" width=50% height=50% text-align=center/></p>
 <p>如上所示为牛顿法的简易过程。我们初始值为\(x _0\)，然后在\((x _0,f(x _0))\)做切线得到\(x _0\)，依次类推会接近于得到\(x _n\),使得\(f(x _n)\)接近于0。具体算法的证明请见文献2。</p>
 <p>根据上面的算法，我们可以轻易的推导出</p>
@@ -387,10 +387,10 @@ if __name__== &quot;__main__&quot;:
   showPic(xita[1],xita[0],x1_arr,x2_arr)
   print(xita)
 </code></pre>
-<p>得到\({\theta _0}\)和\({\theta _1}\)分别为<br />
+<p>得到\({\theta _0}\)和\({\theta _1}\)分别为<br>
 2.7762287194293407, 4.835356147838368。得到的曲线如下：</p>
 <img src="/images/机器学习/监督学习-分类问题计算结果3.png" width=50% height=50% text-align=center/>
-<h2 id="6-参考文献"><a class="markdownIt-Anchor" href="#6-参考文献"></a> 6 参考文献</h2>
+<h2 id="6-参考文献">6 参考文献</h2>
 <ul>
 <li>1 &lt;&lt; cs229-notes1 &gt;&gt;</li>
 <li>2 &lt;&lt; 计算机科学计算 &gt;&gt; 施吉林,张宏伟，金光日编</li>
@@ -402,7 +402,7 @@ if __name__== &quot;__main__&quot;:
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2017/06/13/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-2.2-%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0%E4%B9%8B%E5%88%86%E7%B1%BB/" data-id="clwallcvy000b0scm1p587lru" data-title="机器学习 2.2 监督学习之逻辑回归" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2017/06/13/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-2.2-%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0%E4%B9%8B%E5%88%86%E7%B1%BB/" data-id="clwalnout000f90cmbqkuaa9t" data-title="机器学习 2.2 监督学习之逻辑回归" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       

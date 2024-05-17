@@ -6,12 +6,12 @@
   
   <title>机器学习-2.4-监督学习之softmax | Hexo</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-  <meta name="description" content="Softmax Regression 下面介绍一下指数族分布的另外一个例子。之前的逻辑回归中，可以用来解决二分类的问题。对于有k中可能结果的时候，问题就转化为多分类问题了，也就是接下来要说明的softmax regression问题。 s  1 函数定义 在进行下一步推导前，我们先定义部分辅助函数。我们这里事先定义一个k-1维向量\(T(y)\)，这里具体对应于指数族分布的\(T(y)\),具">
+  <meta name="description" content="Softmax Regression 下面介绍一下指数族分布的另外一个例子。之前的逻辑回归中，可以用来解决二分类的问题。对于有k中可能结果的时候，问题就转化为多分类问题了，也就是接下来要说明的softmax regression问题。 s 1 函数定义 在进行下一步推导前，我们先定义部分辅助函数。我们这里事先定义一个k-1维向量\(T(y)\)，这里具体对应于指数族分布的\(T(y)\),具体定">
 <meta property="og:type" content="article">
 <meta property="og:title" content="机器学习-2.4-监督学习之softmax">
 <meta property="og:url" content="http://example.com/2017/07/24/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-2-4-%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0%E4%B9%8Bsoftmax/index.html">
 <meta property="og:site_name" content="Hexo">
-<meta property="og:description" content="Softmax Regression 下面介绍一下指数族分布的另外一个例子。之前的逻辑回归中，可以用来解决二分类的问题。对于有k中可能结果的时候，问题就转化为多分类问题了，也就是接下来要说明的softmax regression问题。 s  1 函数定义 在进行下一步推导前，我们先定义部分辅助函数。我们这里事先定义一个k-1维向量\(T(y)\)，这里具体对应于指数族分布的\(T(y)\),具">
+<meta property="og:description" content="Softmax Regression 下面介绍一下指数族分布的另外一个例子。之前的逻辑回归中，可以用来解决二分类的问题。对于有k中可能结果的时候，问题就转化为多分类问题了，也就是接下来要说明的softmax regression问题。 s 1 函数定义 在进行下一步推导前，我们先定义部分辅助函数。我们这里事先定义一个k-1维向量\(T(y)\)，这里具体对应于指数族分布的\(T(y)\),具体定">
 <meta property="og:locale" content="en_US">
 <meta property="og:image" content="http://example.com/images/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0-softmax%E6%A0%B7%E6%9C%AC.png">
 <meta property="og:image" content="http://example.com/images/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0-softmax%E8%AE%A1%E7%AE%97%E7%BB%93%E6%9E%9C.png">
@@ -100,10 +100,10 @@
     <div class="e-content article-entry" itemprop="articleBody">
       
         <script type="text/javascript" src="/Users/zcy/Desktop/study/git/MathJax-master/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-<h1 id="softmax-regression"><a class="markdownIt-Anchor" href="#softmax-regression"></a> Softmax Regression</h1>
-<p>下面介绍一下指数族分布的另外一个例子。之前的逻辑回归中，可以用来解决二分类的问题。对于有k中可能结果的时候，问题就转化为多分类问题了，也就是接下来要说明的softmax regression问题。<br />
+<h1>Softmax Regression</h1>
+<p>下面介绍一下指数族分布的另外一个例子。之前的逻辑回归中，可以用来解决二分类的问题。对于有k中可能结果的时候，问题就转化为多分类问题了，也就是接下来要说明的softmax regression问题。<br>
 s</p>
-<h2 id="1-函数定义"><a class="markdownIt-Anchor" href="#1-函数定义"></a> 1 函数定义</h2>
+<h2 id="1-函数定义">1 函数定义</h2>
 <p>在进行下一步推导前，我们先定义部分辅助函数。我们这里事先定义一个k-1维向量\(T(y)\)，这里具体对应于指数族分布的\(T(y)\),具体定义如下:</p>
 
 $$T(1) = \left[ \begin{gathered}  1 \hfill \\\  0 \hfill \\\  0 \hfill \\\  ... \hfill \\\  0 \hfill \\ \end{gathered}  \right],T(2) = \left[ \begin{gathered}  0 \hfill \\\  1 \hfill \\\  0 \hfill \\\  ... \hfill \\\  0 \hfill \\ \end{gathered}  \right],T(3) = \left[ \begin{gathered}  0 \hfill \\\  0 \hfill \\\  1 \hfill \\\  ... \hfill \\\  0 \hfill \\\ \end{gathered}  \right],...,T(k - 1) = \left[ \begin{gathered}  0 \hfill \\\  0 \hfill \\\  0 \hfill \\\  ... \hfill \\\  1 \hfill \\ \end{gathered}  \right],T(k) = \left[ \begin{gathered}  0 \hfill \\\  0 \hfill \\\  0 \hfill \\\  ... \hfill \\\  0 \hfill \\ \end{gathered}  \right]$$
@@ -116,8 +116,8 @@ $$1\{ false\} = 0$$
 <blockquote>
 <p>可以通过带入值的方式验证上式。</p>
 </blockquote>
-<h2 id="2模型推导"><a class="markdownIt-Anchor" href="#2模型推导"></a> 2	模型推导</h2>
-<p>在softmax中,我们知道\(y \in \{ 1,2,…,k\}\)。我们设置\(y=1\)的概率为\(\phi _1\),<br />
+<h2 id="2模型推导">2	模型推导</h2>
+<p>在softmax中,我们知道\(y \in \{ 1,2,…,k\}\)。我们设置\(y=1\)的概率为\(\phi _1\),<br>
 类似的有\(y=k\)的概率为\(\phi _k\)，并且我们轻易得到如下公式：</p>
 $$\sum\limits _{i = 1}^k {\phi _i}  = 1$$$${\phi _k} = \sum\limits _{i = 1}^{k - 1}{\phi _i}$$
 
@@ -176,7 +176,7 @@ $$\sum\limits _{i = 1}^m {p(y = {y^i}|x,\theta )}  = \sum\limits _{i = 1}^m {\pr
 <p>取自然对数后，我们定义最大似然函数:</p>
 
 $$l(\theta ) = \sum\limits _{i = 1}^m {\ln \prod\limits _{l = 1}^k {(\frac{e^{\theta _l^Tx}}{\sum\limits _{j = 1}^k {e^{\theta _j^Tx}}})^{1\{{y^i} = l\}}}}$$
-<p>当且仅当\({y^i} = l\)的时候, \(<sup>{1{y</sup>i=l\} = 1})。其他值为0，我们可以将连乘转化，如下：</p>
+<p>当且仅当\({y^i} = l\)的时候, \(^{1{y^i=l\} = 1})。其他值为0，我们可以将连乘转化，如下：</p>
 $$l(\theta ) = \sum\limits _{i = 1}^m {\ln (\frac{e^{\theta _{y^i}^Tx}}{\sum\limits _{j = 1}^k {e^{\theta _j^Tx}}})}  = \sum\limits _{i = 1}^m {\ln [\theta _{y^i}^Tx - \ln \sum\limits _{j = 1}^k {e^{\theta _j^Tx}}]} $$
 
 <p>然后对其求偏导数,对\(y _i=f\)的时候后有：</p>
@@ -191,7 +191,7 @@ $$l(\theta ) = \sum\limits _{i = 1}^m {\ln \prod\limits _{l = 1}^k {(\frac{e^{\t
 <blockquote>
 <p>\(x _f\)是一个向量，因为公式一次迭代更新一个维度下的一组\(\theta\)。事实上，这里是一个向量求微分。如果我们对的某个元素\(\theta\)进行微分，我们依然能够得到这个公式。</p>
 </blockquote>
-<h2 id="3-实际问题的解决"><a class="markdownIt-Anchor" href="#3-实际问题的解决"></a> 3 实际问题的解决</h2>
+<h2 id="3-实际问题的解决">3 实际问题的解决</h2>
 <p>我们随机制造一组数据，在\(2*2\)的空间内使用直线\({x _2} = 0.5*{x _1}\)和直线\({x _2} = -0.5*{x _1}+2\)具体的分类如下:</p>
 <img src="/images/机器学习/监督学习-softmax样本.png" width=50% height=50% text-align=center/>
 <p>根据之前的推导，编写如下代码:</p>
@@ -202,7 +202,7 @@ $$l(\theta ) = \sum\limits _{i = 1}^m {\ln \prod\limits _{l = 1}^k {(\frac{e^{\t
 </blockquote>
 <p>然后，我们随机制造一组值，看看分类效果，具体如下：</p>
 <img src="/images/机器学习/监督学习-softmax计算结果.png" width=50% height=50% text-align=center/>
-<h2 id="附录-公式推导手写版"><a class="markdownIt-Anchor" href="#附录-公式推导手写版"></a> 附录 公式推导手写版</h2>
+<h2 id="附录-公式推导手写版">附录 公式推导手写版</h2>
 <img src="/images/机器学习/监督学习-softmax公式推导手写版1.png" width=50% height=50% text-align=center/>
 <img src="/images/机器学习/监督学习-softmax公式推导手写版2.png" width=50% height=50% text-align=center/>
 <img src="/images/机器学习/监督学习-softmax公式推导手写版3.png" width=50% height=50% text-align=center/>
@@ -210,7 +210,7 @@ $$l(\theta ) = \sum\limits _{i = 1}^m {\ln \prod\limits _{l = 1}^k {(\frac{e^{\t
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2017/07/24/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-2-4-%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0%E4%B9%8Bsoftmax/" data-id="clwallcvv00060scm2e2d714x" data-title="机器学习-2.4-监督学习之softmax" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2017/07/24/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-2-4-%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0%E4%B9%8Bsoftmax/" data-id="clwalnouo000790cm1iqz8fle" data-title="机器学习-2.4-监督学习之softmax" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
