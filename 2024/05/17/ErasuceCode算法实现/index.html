@@ -22,7 +22,7 @@
 <meta property="og:image" content="http://example.com/images/ec/ec%E9%AB%98%E6%96%AF%E6%B6%88%E5%85%83%E5%A4%84%E7%90%86%E7%AC%AC0%E8%A1%8C.png">
 <meta property="og:image" content="http://example.com/images/ec/ecgf7table.png">
 <meta property="article:published_time" content="2024-05-17T02:46:33.253Z">
-<meta property="article:modified_time" content="2024-05-17T11:31:42.343Z">
+<meta property="article:modified_time" content="2024-06-05T12:48:20.593Z">
 <meta property="article:author" content="zhengchenyu">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:image" content="http://example.com/images/ec/ec%E7%BC%96%E7%A0%81%E7%9F%A9%E9%98%B5.png">
@@ -129,8 +129,7 @@
 <p>前面已经说明了前6行向量是互为线性无关，后3行向量也是互为线性无关的。如果在前6行中选取n行，在后三行中去6-n行，那么这6行向量还是线性无关的吗？假设n为5，由于后三行的没有元素为0，因此肯定是缺一个维度来保证线性相关。如果n为4和3也是同样的道理。因此这个9 * 6的矩阵随意挑出6行组成的6 * 6阶矩阵一定是可逆的。</p>
 <h2 id="22-高斯消元求逆"><a class="markdownIt-Anchor" href="#22-高斯消元求逆"></a> 2.2 高斯消元求逆</h2>
 <p>本文使用了容易理解的高斯消元法求逆(<a target="_blank" rel="noopener" href="https://github.com/zhengchenyu/SimpleErasureCode/blob/24be76083a0c3172f1d2fe7af8e1ad972935657f/src/main/java/zcy/ec/coder/math/Matrix.java#L73">inverse</a>)。假设当前6 * 6矩阵为A,  在右侧再拼接6 * 6的单位矩阵E，得到矩阵[A | E]。如果使用A<sup>-1</sup>乘以这个矩阵，会得到[E|A<sup>-1</sup>]。这样我们只需将A矩阵转化为单元矩阵，E矩阵自然就变成了A<sup>-1</sup>。(<a target="_blank" rel="noopener" href="https://github.com/zhengchenyu/SimpleErasureCode/blob/24be76083a0c3172f1d2fe7af8e1ad972935657f/src/main/java/zcy/ec/coder/math/Matrix.java#L73C24-L73C31">高斯消元求逆</a>)<br />
-具体的过程如下:<br />
-按照行依次执行如下的过程:</p>
+对每一行行依次执行如下的过程:</p>
 <ul>
 <li>(1) 对第i行, 找到第i行第i列的值。(<a target="_blank" rel="noopener" href="https://github.com/zhengchenyu/SimpleErasureCode/blob/24be76083a0c3172f1d2fe7af8e1ad972935657f/src/main/java/zcy/ec/coder/math/Matrix.java#L120">Step1</a>)</li>
 <li>(2) 然后计算该值的乘法逆元。然后让该行的每个元素均乘以这个乘法逆元。(<a target="_blank" rel="noopener" href="https://github.com/zhengchenyu/SimpleErasureCode/blob/24be76083a0c3172f1d2fe7af8e1ad972935657f/src/main/java/zcy/ec/coder/math/Matrix.java#L126">Step2</a>)</li>
@@ -158,7 +157,7 @@
 <p>首先给出如下定义:</p>
 <ul>
 <li>加法逆元: 给定x，如果存在x’，使得x+x’=x’+x=0，则称x’是x的加法逆元。</li>
-<li>乘法逆元: 给定x，如果存在x’，使得x * x’=x’ * x=e，则称x’为x的乘法逆元。其中e为该群的单位元。对于G(7)，e为1。</li>
+<li>乘法逆元: 给定x，如果存在x’，使得x * x’=x’ * x=e，则称x’为x的乘法逆元。其中e为该群的单位元。对于GF(7)，e为1。</li>
 </ul>
 <p>我们定义一种新的运算，即模7运算。对于加法和乘法运算，我们会将结果然后模7。譬如, 8 + 3 = 11 mod 7 = 4。8 * 3 = 24 mod  7 = 3。<br />
 对于加法逆元和乘法逆元，根据定义我们可以穷举加法和乘法计算，根据结果得到对应的逆元。譬如, 4 + 3 = 7 mod 7 = 0，我们就说4和3互为加法逆元。2 * 4 = 8 mod 7 = 1，我们就说2和4互为乘法逆元。<br />
@@ -169,7 +168,7 @@
 <h3 id="321-基本原理"><a class="markdownIt-Anchor" href="#321-基本原理"></a> 3.2.1 基本原理</h3>
 <p>实际的数字存储的值是0-255, 那么是否意味着我们可以直接使用GF(256)呢? 答案是不可以的。因为256是合数，譬如16 * 16 = 256 mod 256 = 0，那么16就不存在乘法逆元，也就难以进行边界吗。<br />
 因此需要引入多项式的运算，且要求同指数幂下遵循GF(2)。模数为不可约多项式。对于不可约多项式a, 无法找到两个不为1的多项式b和c使得b * c = a。可以使用穷举法得到每个多项式的加法逆元和乘法逆元。事实上只要集合内的每个元素都有1对1对应的乘法逆元，就可以满足我们的要求。文献1的表4.6也通过穷举证明了GF(2<sup>3</sup>)的有效性。<br />
-多项式的计算与对byte的编码有什么关系呢？由于多项式的同指数幂是GF(2)，也就意味着对于多项式a<sub>0</sub> + a<sub>1</sub>x + a<sub>2</sub>x<sup>2</sup> + a<sub>3</sub>x<sup>3</sup> + a<sub>4</sub>x<sup>4</sup> + a<sub>5</sub>x<sup>5</sup>  +  a<sub>6</sub>x<sup>6</sup> +  a<sub>7</sub>x<sup>7</sup> ，比有a<sub>i</sub> 为0和1。如果a<sub>0</sub>为第0位，a<sub>1</sub>为第1位，依次类推，这组系数就是一个byte。这样就把要存储的byte与多项式运算结合了。</p>
+多项式的计算与对byte的编码有什么关系呢？由于多项式的同指数幂是GF(2)，也就意味着对于多项式a<sub>0</sub> + a<sub>1</sub>x + a<sub>2</sub>x<sup>2</sup> + a<sub>3</sub>x<sup>3</sup> + a<sub>4</sub>x<sup>4</sup> + a<sub>5</sub>x<sup>5</sup>  +  a<sub>6</sub>x<sup>6</sup> +  a<sub>7</sub>x<sup>7</sup> ，a<sub>i</sub> 为0和1。如果a<sub>0</sub>为第0位，a<sub>1</sub>为第1位，依次类推，这组系数就是一个byte。这样就把要存储的byte与多项式运算结合了。</p>
 <h3 id="322-计算"><a class="markdownIt-Anchor" href="#322-计算"></a> 3.2.2 计算</h3>
 <p>本章主要介绍如何计算GF(2<sup>8</sup>)。对于加法和乘法，我们直接使用多项式运算。对于加法逆元和乘法逆元，我们穷举加法和乘法运算，然后通过码表来得到加法和乘法逆元。<br />
 本文的算法的不可约多项式为x<sup>8</sup> + x<sup>4</sup>+ x<sup>3</sup> + 1。<br />
@@ -202,7 +201,7 @@ h(x) * x = (a<sub>0</sub>x + a<sub>1</sub>x<sup>2</sup> + a<sub>2</sub>x<sup>3</
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2024/05/17/ErasuceCode%E7%AE%97%E6%B3%95%E5%AE%9E%E7%8E%B0/" data-id="clwalojyi0001e8cmhv1a270t" data-title="" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2024/05/17/ErasuceCode%E7%AE%97%E6%B3%95%E5%AE%9E%E7%8E%B0/" data-id="clzc8m5h10001hws89o6070kz" data-title="" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -211,6 +210,15 @@ h(x) * x = (a<sub>0</sub>x + a<sub>1</sub>x<sup>2</sup> + a<sub>2</sub>x<sup>3</
   
     
 <nav id="article-nav">
+  
+    <a href="/2024/08/02/uniffle-0.9.1%E5%8F%91%E5%B8%83/" id="article-nav-newer" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Newer</strong>
+      <div class="article-nav-title">
+        
+          (no title)
+        
+      </div>
+    </a>
   
   
     <a href="/2024/04/22/2024-04-22/" id="article-nav-older" class="article-nav-link-wrap">
@@ -240,7 +248,7 @@ h(x) * x = (a<sub>0</sub>x + a<sub>1</sub>x<sup>2</sup> + a<sub>2</sub>x<sup>3</
   <div class="widget-wrap">
     <h3 class="widget-title">Archives</h3>
     <div class="widget">
-      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2024/05/">May 2024</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2024/04/">April 2024</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2023/12/">December 2023</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/10/">October 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">September 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/08/">August 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/07/">July 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/06/">June 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/05/">May 2017</a></li></ul>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2024/08/">August 2024</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2024/05/">May 2024</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2024/04/">April 2024</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2023/12/">December 2023</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/10/">October 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">September 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/08/">August 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/07/">July 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/06/">June 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/05/">May 2017</a></li></ul>
     </div>
   </div>
 
@@ -251,6 +259,10 @@ h(x) * x = (a<sub>0</sub>x + a<sub>1</sub>x<sup>2</sup> + a<sub>2</sub>x<sup>3</
     <h3 class="widget-title">Recent Posts</h3>
     <div class="widget">
       <ul>
+        
+          <li>
+            <a href="/2024/08/02/uniffle-0.9.1%E5%8F%91%E5%B8%83/">(no title)</a>
+          </li>
         
           <li>
             <a href="/2024/05/17/ErasuceCode%E7%AE%97%E6%B3%95%E5%AE%9E%E7%8E%B0/">(no title)</a>
@@ -266,10 +278,6 @@ h(x) * x = (a<sub>0</sub>x + a<sub>1</sub>x<sup>2</sup> + a<sub>2</sub>x<sup>3</
         
           <li>
             <a href="/2023/12/25/RSS-%E8%BF%9C%E7%A8%8BMerge%E7%9A%84%E8%AE%BE%E8%AE%A1EN/">RSS-Remote Merge Design</a>
-          </li>
-        
-          <li>
-            <a href="/2017/10/22/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-3-2-%E9%9D%9E%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0%E4%B9%8B%E4%B8%BB%E6%88%90%E5%88%86%E5%88%86%E6%9E%90/">机器学习-3.2-非监督学习之主成分分析.md</a>
           </li>
         
       </ul>
@@ -319,5 +327,21 @@ h(x) * x = (a<sub>0</sub>x + a<sub>1</sub>x<sup>2</sup> + a<sub>2</sub>x<sup>3</
 
 
   </div>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        tex2jax: {
+            inlineMath: [ ["$","$"], ["\\(","\\)"] ],
+            skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+            processEscapes: true
+        }
+    });
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax();
+        for (var i = 0; i < all.length; ++i)
+            all[i].SourceElement().parentNode.className += ' has-jax';
+    });
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
 </body>
 </html>
