@@ -94,56 +94,56 @@
     <div class="e-content article-entry" itemprop="articleBody">
       
         <script type="text/javascript" src="/Users/zcy/Desktop/study/git/MathJax-master/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-<h1 id="generalized-linear-models"><a class="markdownIt-Anchor" href="#generalized-linear-models"></a> Generalized Linear Models</h1>
-<p>回归分析中我们使用了高斯分布,分类问题服从伯努利分布。这两种方法都是第一个更通用的分布的特例，我们称其Generalized Linear Models (GLMs)</p>
-<h2 id="1-指数族分布"><a class="markdownIt-Anchor" href="#1-指数族分布"></a> 1 指数族分布</h2>
-<p>我们定义如下形式为指数族分布：</p>
+
+<h1 id="Generalized-Linear-Models"><a href="#Generalized-Linear-Models" class="headerlink" title="Generalized Linear Models"></a>Generalized Linear Models</h1><p>回归分析中我们使用了高斯分布,分类问题服从伯努利分布。这两种方法都是第一个更通用的分布的特例，我们称其Generalized Linear Models (GLMs)</p>
+<h2 id="1-指数族分布"><a href="#1-指数族分布" class="headerlink" title="1 指数族分布"></a>1 指数族分布</h2><p>我们定义如下形式为指数族分布：</p>
 
 $$p(y;\eta ) = b(y)exp({\eta ^T}T(y) - a(\eta ))$$
 
-<p>其中,\(\eta \)是自然参数(natural parameter )，\(T(y) \)叫做充分统计量(sufficient statistic),一般\(T(y)=y\)。\(a(\eta) \)是log partition function 。\({e^{ - a\left( \eta  \right)}}\)在归整化很重要，这个参数确保\(p(y;\eta )\)归整为1。</p>
-<h2 id="2-指数族分布的特例"><a class="markdownIt-Anchor" href="#2-指数族分布的特例"></a> 2 指数族分布的特例</h2>
-<p>其中伯努利分布和高斯分布都是指数族分布的一个特例。</p>
-<h3 id="21-伯努利分布的指数族表达"><a class="markdownIt-Anchor" href="#21-伯努利分布的指数族表达"></a> 2.1 伯努利分布的指数族表达</h3>
-<p>伯努利分布的指数表示:</p>
+
+<p>其中,\(\eta \)是自然参数(natural parameter )，\(T(y) \)叫做充分统计量(sufficient statistic),一般\(T(y)&#x3D;y\)。\(a(\eta) \)是log partition function 。\({e^{ - a\left( \eta  \right)}}\)在归整化很重要，这个参数确保\(p(y;\eta )\)归整为1。</p>
+<h2 id="2-指数族分布的特例"><a href="#2-指数族分布的特例" class="headerlink" title="2 指数族分布的特例"></a>2 指数族分布的特例</h2><p>其中伯努利分布和高斯分布都是指数族分布的一个特例。</p>
+<h3 id="2-1-伯努利分布的指数族表达"><a href="#2-1-伯努利分布的指数族表达" class="headerlink" title="2.1 伯努利分布的指数族表达"></a>2.1 伯努利分布的指数族表达</h3><p>伯努利分布的指数表示:</p>
 
 $$p(y,\varphi ) = {\varphi ^y}{(1 - \varphi )^{1 - y}} = \exp (y\log \frac{\varphi }{1 - \varphi } + \log (1 - \varphi ))$$
 
-<p>对照指数函数族的表达式，有\(b(y) = 1\),\(T(y) = y\),\(\eta  = \log \frac{\varphi }{1 - \varphi}\)等价于\(\varphi=\frac{e<sup>\eta}{e</sup>\eta + 1}\),\(a(y) = \log \frac{1}{1 - \varphi } = \log ({e^\eta } + 1)\)</p>
-<h3 id="22-高斯分布的指数族表达"><a class="markdownIt-Anchor" href="#22-高斯分布的指数族表达"></a> 2.2 高斯分布的指数族表达</h3>
-<p>高斯分布的指数表示:</p>
+
+<p>对照指数函数族的表达式，有\(b(y) &#x3D; 1\),\(T(y) &#x3D; y\),\(\eta  &#x3D; \log \frac{\varphi }{1 - \varphi}\)等价于\(\varphi&#x3D;\frac{e^\eta}{e^\eta + 1}\),\(a(y) &#x3D; \log \frac{1}{1 - \varphi } &#x3D; \log ({e^\eta } + 1)\)</p>
+<h3 id="2-2-高斯分布的指数族表达"><a href="#2-2-高斯分布的指数族表达" class="headerlink" title="2.2 高斯分布的指数族表达"></a>2.2 高斯分布的指数族表达</h3><p>高斯分布的指数表示:</p>
 
 $$p(y;\mu ) = \frac{1}{{\sqrt {2\pi } }}\exp ( - \frac{1}{2}{(y - \mu )^2}) = \frac{1}{{\sqrt {2\pi } }}\exp ( - \frac{1}{2}{y^2})\exp (\mu y - \frac{1}{2}{\mu ^2})$$
 
-<p>对照指数函数族的表达式，有\(b(y) = \frac{1}{\sqrt {2\pi }}\exp ( - \frac{1}{2}{y^2})\),\( \eta = \mu \),\(T(y) = y\),\(a(\eta ) = \frac{1}{2}{u^2} = \frac{1}{2}{\eta ^2}\)。</p>
-<h2 id="3-指数函数组的三个假设"><a class="markdownIt-Anchor" href="#3-指数函数组的三个假设"></a> 3 指数函数组的三个假设</h2>
-<p>三个假设分别为:</p>
+
+<p>对照指数函数族的表达式，有\(b(y) &#x3D; \frac{1}{\sqrt {2\pi }}\exp ( - \frac{1}{2}{y^2})\),\( \eta &#x3D; \mu \),\(T(y) &#x3D; y\),\(a(\eta ) &#x3D; \frac{1}{2}{u^2} &#x3D; \frac{1}{2}{\eta ^2}\)。</p>
+<h2 id="3-指数函数组的三个假设"><a href="#3-指数函数组的三个假设" class="headerlink" title="3 指数函数组的三个假设"></a>3 指数函数组的三个假设</h2><p>三个假设分别为:</p>
 <ul>
 <li>\(y|x;\theta\)服从指数分布</li>
-<li>给定\(x\)的情况下，我们的目标是预测\(T(y)\)。在大多数的例子中，\(T(y)=y\),因此就意味着我们通过学习得到函数h, 使得\(h(x)=E(y|x)\), 意思就是给定x，得到函数h使得其与训练样本的数学期望相等。</li>
+<li>给定\(x\)的情况下，我们的目标是预测\(T(y)\)。在大多数的例子中，\(T(y)&#x3D;y\),因此就意味着我们通过学习得到函数h, 使得\(h(x)&#x3D;E(y|x)\), 意思就是给定x，得到函数h使得其与训练样本的数学期望相等。</li>
 <li>自然参数\(\theta\)与输入\(x\)是线性关系。</li>
 </ul>
 <p>对照上面的过程，我们可知伯努利分布和高斯分布都符合这三个假设</p>
-<h2 id="4-glms公式推导"><a class="markdownIt-Anchor" href="#4-glms公式推导"></a> 4 GLMs公式推导</h2>
-<p>还是之前的问题，已知有\(m\)个样本，通过学习模拟正确的\(h(x)\),使得其能够有效的推测\(y\)。(这里我们假定了\(T(y)=y\))</p>
+<h2 id="4-GLMs公式推导"><a href="#4-GLMs公式推导" class="headerlink" title="4 GLMs公式推导"></a>4 GLMs公式推导</h2><p>还是之前的问题，已知有\(m\)个样本，通过学习模拟正确的\(h(x)\),使得其能够有效的推测\(y\)。(这里我们假定了\(T(y)&#x3D;y\))</p>
 <p>得到最大释然函数:</p>
 
 $$l(\eta ) = \sum\limits_{i = 1}^m {b({y^i}){\text{ }}exp({\eta ^T}T({y^i}) - a(\eta ))} $$
+
 
 <p>然后为了求其最大值，我们对其取自然对数后求倒数。</p>
 
 $$\frac{{\partial \ln (l(\eta ))}}{{\partial \eta }} = \sum\limits _{i = 1}^m {\frac{{\partial (\ln b({y^i}) + {\eta ^T}T({y^i}) - a(\eta ))}}{{\partial \eta }}}  = \sum\limits _{i = 1}^m {(T({y^i})}  - \frac{{\partial a(\eta )}}{{\partial \eta }})$$
 
-<p>在我们之前指数族分布的定义3中，\(\eta\)是各个维度\(x\)的线性表达。有\(\eta  = {\theta ^T}x\)。所以，我们对每一个维度求偏导数，有：</p>
+
+<p>在我们之前指数族分布的定义3中，\(\eta\)是各个维度\(x\)的线性表达。有\(\eta  &#x3D; {\theta ^T}x\)。所以，我们对每一个维度求偏导数，有：</p>
 
 $$\frac{{\partial \ln (l(\eta ))}}{{\partial {\theta _j}}} = \frac{{\partial \ln (l(\eta ))}}{{\partial \eta }}\frac{{\partial \eta }}{{\partial {\theta _j}}} = \sum\limits _{i = 1}^m {(T({y^i})}  - \frac{{\partial a(\eta )}}{{\partial \eta }})x _j^i$$
+
 
 <p>如果指数分布为伯努利分布，我们将式子带入其中，能够轻易的关于\(\theta _j\)的偏导数，且与之前推导的结果一致，具体过程不详细说了。高斯分布同理。</p>
 
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2017/07/16/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-2.3-%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0%E4%B9%8B%E9%80%9A%E7%94%A8%E7%BA%BF%E6%80%A7%E6%A8%A1%E5%9E%8B/" data-id="cuidtdTkFVLTju9_lTfRN-hCA" data-title="机器学习-2.3-监督学习之通用线性模型" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2017/07/16/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-2.3-%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0%E4%B9%8B%E9%80%9A%E7%94%A8%E7%BA%BF%E6%80%A7%E6%A8%A1%E5%9E%8B/" data-id="cuidCRF4vR6vjgYpmxt5Nt5fu" data-title="机器学习-2.3-监督学习之通用线性模型" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -180,37 +180,42 @@ $$\frac{{\partial \ln (l(\eta ))}}{{\partial {\theta _j}}} = \frac{{\partial \ln
     <div class="e-content article-entry" itemprop="articleBody">
       
         <script type="text/javascript" src="/Users/zcy/Desktop/study/git/MathJax-master/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-<h1 id="监督学习"><a class="markdownIt-Anchor" href="#监督学习"></a> 监督学习</h1>
-<p>本章继续研究监督学习的问题。</p>
-<h2 id="1-回归问题"><a class="markdownIt-Anchor" href="#1-回归问题"></a> 1 回归问题</h2>
-<p>我们随机制造一个样本空间\({x _2} \geqslant 2{x _1} + 1\)，对于对空间进行分类。具体例子如下：</p>
+
+<h1 id="监督学习"><a href="#监督学习" class="headerlink" title="监督学习"></a>监督学习</h1><p>本章继续研究监督学习的问题。</p>
+<h2 id="1-回归问题"><a href="#1-回归问题" class="headerlink" title="1 回归问题"></a>1 回归问题</h2><p>我们随机制造一个样本空间\({x _2} \geqslant 2{x _1} + 1\)，对于对空间进行分类。具体例子如下：</p>
 <img src="/images/机器学习/监督学习-分类问题样本.png" width=50% height=50% text-align=center/>
+
 <p>对于这些样本，假定可以通过二维线性曲线进行分类。然后模拟出某条曲线，使样本得到一个很好的分类。</p>
 <p>这个分类问题的样本的y值只有0或1(0-1分布或伯努利分布)，即表示在直线上面或直线下面。如果用之前的线性回归结果将非常糟糕。因为对于分类问题，线性回归得到的线性曲线，得到的\(y &gt; 1\)或\(y &lt; 0\)这些是没有意义的，肯定是错误的。因此引入了logistic函数，转换为Logistic regression，logistic函数如下：</p>
 
 $$h(z) = \frac{1}{{1 + {e^{ - z}}}}$$
 
+
 <p>函数曲线如下：</p>
 <img src="/images/机器学习/监督学习-分类问题辅助函数.png" width=50% height=50% text-align=center/>
-<p>如果我们设置\(z = {\theta _1}{x _1} + {\theta _0} - {x _2}\)。因此，对于分类问题就可以转化为：对于\({x _2} \geqslant {\theta _1}{x _1} + {\theta _0}\)就可以转化为h(z)趋向于0的程度，对于\({x _2} \leqslant {\theta _1}{x _1} + {\theta _0}\)就可以转化为h(z)趋向于1的程度。我们简化为如下公式:</p>
+
+<p>如果我们设置\(z &#x3D; {\theta _1}{x _1} + {\theta _0} - {x _2}\)。因此，对于分类问题就可以转化为：对于\({x _2} \geqslant {\theta _1}{x _1} + {\theta _0}\)就可以转化为h(z)趋向于0的程度，对于\({x _2} \leqslant {\theta _1}{x _1} + {\theta _0}\)就可以转化为h(z)趋向于1的程度。我们简化为如下公式:</p>
 
 $$z = {\theta _1}{x _1} + {\theta _0}{x _0} + {\theta _2}{x _2} = {\theta ^T}x$$
 
-<p>其中,\({x _0} = 1\)，\({\theta _2} =  - 1\)。</p>
-<h2 id="2-回归问题推导"><a class="markdownIt-Anchor" href="#2-回归问题推导"></a> 2 回归问题推导</h2>
-<p>我们求辅助函数的导数，以备后来使用：</p>
+
+<p>其中,\({x _0} &#x3D; 1\)，\({\theta _2} &#x3D;  - 1\)。</p>
+<h2 id="2-回归问题推导"><a href="#2-回归问题推导" class="headerlink" title="2 回归问题推导"></a>2 回归问题推导</h2><p>我们求辅助函数的导数，以备后来使用：</p>
 
 $$h'(z) = (\frac{1}{{1 + {e^{ - z}}}})' =  - \frac{{ - {e^{ - z}}}}{{{{(1 + {e^{ - z}})}^2}}} = \frac{1}{{1 + {e^{ - z}}}}(1 - 1 + {e^{ - z}}) = h(z)(1 - h(z))$$
+
 
 <p>接下来我们从公式角度对问题进行建模分析与推导。</p>
 <p>这里我们将我们的函数\({h_\theta }(x)\)转化为如下形式:</p>
 
 $${h_\theta }(x) = \frac{1}{{1 + {e^{ - {\theta ^T}x}}}}$$
 
-<p>对于0-1分布，由于\({h_\theta }(x)\)只能为0或1。所以，在已知\(x\)和\({\theta}\)的情况下，我们可以认为有\({h_\theta }(x)\)的概率得到\(y=1\)。因此有如下公式：</p>
+
+<p>对于0-1分布，由于\({h_\theta }(x)\)只能为0或1。所以，在已知\(x\)和\({\theta}\)的情况下，我们可以认为有\({h_\theta }(x)\)的概率得到\(y&#x3D;1\)。因此有如下公式：</p>
 
 $$p(y = 1|x,\theta ) = {h_\theta }(x)$$
 $$p(y = 0|x,\theta ) = 1 - {h_\theta }(x)$$
+
 
 <p>综合两个公式有如下公式：</p>
 
@@ -220,33 +225,38 @@ $$p(y|x,\theta ) = {h_\theta }{(x)^y}{(1 - {h _\theta }(x))^{(1 - y)}}$$
 
 $$L(\theta ) = \prod\limits _{i = 1}^m {{h _\theta }{{(x{}^i)}^{{y^i}}}{{(1 - {h _\theta }({x^i}))}^{(1 - {y^i})}}} $$
 
+
 <p>取自然对数，对其中一个维度\({\theta _j}\)求偏导数，如下：</p>
 
 $$\ell ({\theta _j}) = \frac{{\partial \ln (L(\theta ))}}{{\partial {\theta _j}}} = \frac{\partial } {{\partial {\theta _j}}}(\sum\limits _{i = 1}^m {({y^i}\ln ({h _\theta }(x{}^i)) + (1 - {y^i})} \ln (1 - {h _\theta }(x{}^i))))$$ 
 
-<p>我们使用一个辅助函数\(z = {\theta ^T}x\), 并且\(\ln x\)的倒数是\(\frac{1}{x}\)。<br />
-又由于复合函数有如下求导法则：</p>
+
+<p>我们使用一个辅助函数\(z &#x3D; {\theta ^T}x\), 并且\(\ln x\)的倒数是\(\frac{1}{x}\)。<br>又由于复合函数有如下求导法则：</p>
 
 $$\frac{{df(g(x))}}{{dx}} = \frac{{df(z)}}{{dz}}g(x)'$$
 
-<p>其中\(z = g(x)\)。。(这里再次强调下标识维度，上表是样本编号)。所以有：</p>
+
+<p>其中\(z &#x3D; g(x)\)。。(这里再次强调下标识维度，上表是样本编号)。所以有：</p>
 
 $$\ell ({\theta _j}) = \frac{{\partial L(\theta )}}{{\partial {\theta _j}}} = \frac{\partial }{{\partial {\theta _j}}}(\sum\limits _{i = 1}^m {({y^i}\ln ({h _\theta }(x{}^i)) + (1 - {y^i})} \ln (1 - {h _\theta }(x{}^i))))$$
 
-<p>这里设\(z = {\theta ^T}x\)，有：</p>
+
+<p>这里设\(z &#x3D; {\theta ^T}x\)，有：</p>
 
 $$\ell ({\theta _j}) = \sum\limits _{i = 1}^m {({y^i}\frac{1}{{h(z)}}h'(z) + (1 - {y^i})} \frac{1}{{1 - h(z)}}( - h'(z)))$$
+
 
 <p>将之前的倒数公式带入其中,有:</p>
 
 $$\ell ({\theta _j}) = \sum\limits _{i = 1}^m {(x _j^i(y - {h _\theta }({x^i})))} $$
 
+
 <p>因此这样就可以使用如下的式子学习样本值：</p>
 
 $${\theta _j} = {\theta _j} + \alpha \sum\limits _{i = 1}^m {(x _j^i(y - {h _\theta }({x^i})))} $$
 
-<h2 id="3-代码"><a class="markdownIt-Anchor" href="#3-代码"></a> 3 代码</h2>
-<p>从这一章开始讲代码从matlab转化更为通用的python。</p>
+
+<h2 id="3-代码"><a href="#3-代码" class="headerlink" title="3 代码"></a>3 代码</h2><p>从这一章开始讲代码从matlab转化更为通用的python。</p>
 <p>我们选取合适的步长，当\(J({\theta})\)小于合适的阈值(这里配置为4)，就认为迭代完成。分类代码如下:</p>
 <pre><code>import random
 import math
@@ -267,7 +277,7 @@ x2_res = [-0.5108, -0.1254, 0.6166, 0.5296, 0.5758, -0.5972, 0.3994, 0.9808, 0.7
           
 def make_samples(x0_arr,x1_arr,x2_arr,y_arr):
   # classified by x_2 = 2*x_1 + 1 . (x_1,x_2) is the point of 2-D plane
-  # y is 0 or 1, means 'x_2 &gt;= 2*x_1 + 1 '  or 'x_2 &lt; 2*x_1 + 1'
+  # y is 0 or 1, means &#39;x_2 &gt;= 2*x_1 + 1 &#39;  or &#39;x_2 &lt; 2*x_1 + 1&#39;
   for i in range(len(x1_res)):
     x0_arr.append(1)
     x1_arr.append(x1_res[i])
@@ -303,13 +313,13 @@ def showPic(k,b,point_x1_arr,point_x2_arr):
   Y=[]
   for i in range(X.size):
     Y.append(k*X[i]+b)
-  plt.plot(X, Y, 'b--', label=&quot;logistic&quot;)
+  plt.plot(X, Y, &#39;b--&#39;, label=&quot;logistic&quot;)
   ## show points
   for i in range(len(point_x1_arr)):
     if(point_x2_arr[i]&gt;2*point_x1_arr[i]+1):
-      plt.plot(point_x1_arr[i],point_x2_arr[i],'b--',marker = 'x', color = 'g')
+      plt.plot(point_x1_arr[i],point_x2_arr[i],&#39;b--&#39;,marker = &#39;x&#39;, color = &#39;g&#39;)
     else:
-      plt.plot(point_x1_arr[i],point_x2_arr[i],'r--',marker = '+', color = 'r')
+      plt.plot(point_x1_arr[i],point_x2_arr[i],&#39;r--&#39;,marker = &#39;+&#39;, color = &#39;r&#39;)
   plt.xlabel(&quot;x1&quot;)
   plt.ylabel(&quot;x2&quot;)
   plt.figure(figsize=(8, 4))
@@ -338,11 +348,11 @@ if __name__== &quot;__main__&quot;:
   showPic(xita[1],xita[0],x1_arr,x2_arr)
   print(xita)
 </code></pre>
-<p>经过数论迭代分析，得到\( \theta _0 = 2.7841420917875297 \)，\( \theta _1 = 4.850051144306185 \)。</p>
+<p>经过数论迭代分析，得到\( \theta _0 &#x3D; 2.7841420917875297 \)，\( \theta _1 &#x3D; 4.850051144306185 \)。</p>
 <p>得到如下结果:</p>
 <img src="/images/机器学习/监督学习-分类问题计算结果1.png" width=50% height=50% text-align=center/>
-<h2 id="4-代码的改进"><a class="markdownIt-Anchor" href="#4-代码的改进"></a> 4 代码的改进</h2>
-<p>经过试验发现上面的算法的问题是如果选取合适的阈值。这里将算法修改为两次的\(J({\theta})\)的差值小于0.00001，这样就任务函数已经几近收敛,然后结束迭代。另外，如果\(J({\theta})\)的值某一次迭代增大了,说明算法异常或者迭代参数设置过大。修改后的代码如下:</p>
+
+<h2 id="4-代码的改进"><a href="#4-代码的改进" class="headerlink" title="4 代码的改进"></a>4 代码的改进</h2><p>经过试验发现上面的算法的问题是如果选取合适的阈值。这里将算法修改为两次的\(J({\theta})\)的差值小于0.00001，这样就任务函数已经几近收敛,然后结束迭代。另外，如果\(J({\theta})\)的值某一次迭代增大了,说明算法异常或者迭代参数设置过大。修改后的代码如下:</p>
 <pre><code>  while 1:                                                                             
     j = J(x0_arr, x1_arr, x2_arr, y_arr, xita)                                         
     print(&quot;j=&quot;,j)                                                                      
@@ -358,24 +368,27 @@ if __name__== &quot;__main__&quot;:
 </code></pre>
 <p>得到如下结果:</p>
 <img src="/images/机器学习/监督学习-分类问题计算结果2.png" width=50% height=50% text-align=center/>
-<h2 id="5-牛顿法改进"><a class="markdownIt-Anchor" href="#5-牛顿法改进"></a> 5 牛顿法改进</h2>
-<p>这里说明另外一种快速求值的方法，牛顿法。<br />
-<img src="/images/机器学习/牛顿法示意图.png" width=50% height=50% text-align=center/></p>
+
+<h2 id="5-牛顿法改进"><a href="#5-牛顿法改进" class="headerlink" title="5 牛顿法改进"></a>5 牛顿法改进</h2><p>这里说明另外一种快速求值的方法，牛顿法。<br><img src="/images/机器学习/牛顿法示意图.png" width=50% height=50% text-align=center/></p>
 <p>如上所示为牛顿法的简易过程。我们初始值为\(x _0\)，然后在\((x _0,f(x _0))\)做切线得到\(x _0\)，依次类推会接近于得到\(x _n\),使得\(f(x _n)\)接近于0。具体算法的证明请见文献2。</p>
 <p>根据上面的算法，我们可以轻易的推导出</p>
 
 $${x _{i + 1}} = {x _i} - \frac{{f({x _i})}}{{f'({x _i})}}$$
 
-<p>联系之前的问题，我们可以转化快速得到\({\theta _j}\)使得\(\ell ({\theta _j}) = 0\)问题。（注: 之前的算法使找到最优下降方向使得\(J({\theta})\)最小，而牛顿法是直接得到最优的\({\theta _j}\)）</p>
+
+<p>联系之前的问题，我们可以转化快速得到\({\theta _j}\)使得\(\ell ({\theta _j}) &#x3D; 0\)问题。（注: 之前的算法使找到最优下降方向使得\(J({\theta})\)最小，而牛顿法是直接得到最优的\({\theta _j}\)）</p>
 <p>本问题的公式如下:</p>
 
 $$\ell ({\theta _j}) = \sum\limits _{i = 1}^m {(x _j^i(y - {h _\theta }({x^i})))} $$
 
 
+
 $$\ell '({\theta _j}) =  - \sum\limits _{i = 1}^m {{{(x _j^i)}^2}} $$
 
 
+
 $${\theta _j}: = {\theta _j} - \frac{{\ell ({\theta _j})}}{{\ell '({\theta _j})}} = {\theta _j} - \frac{{\sum\limits _{i = 1}^m {(x _j^i(y - {h _\theta }({x^i})))} }}{{ - \sum\limits _{i = 1}^m {{{(x _j^i)}^2}} }}$$
+
 
 <p>代码如下:</p>
 <pre><code>import sys
@@ -397,7 +410,7 @@ x2_res = [-0.5108, -0.1254, 0.6166, 0.5296, 0.5758, -0.5972, 0.3994, 0.9808, 0.7
 
 def make_samples(x0_arr,x1_arr,x2_arr,y_arr):
   # classified by x_2 = 2*x_1 + 1 . (x_1,x_2) is the point of 2-D plane
-  # y is 0 or 1, means 'x_2 &gt;= 2*x_1 + 1 '  or 'x_2 &lt; 2*x_1 + 1'
+  # y is 0 or 1, means &#39;x_2 &gt;= 2*x_1 + 1 &#39;  or &#39;x_2 &lt; 2*x_1 + 1&#39;
   for i in range(len(x1_res)):
     x0_arr.append(1)
     x1_arr.append(x1_res[i])
@@ -431,13 +444,13 @@ def showPic(k,b,point_x1_arr,point_x2_arr):
   Y=[]
   for i in range(X.size):
     Y.append(k*X[i]+b)
-  plt.plot(X, Y, 'b--', label=&quot;logistic&quot;)
+  plt.plot(X, Y, &#39;b--&#39;, label=&quot;logistic&quot;)
   ## show points
   for i in range(len(point_x1_arr)):
     if(point_x2_arr[i]&gt;2*point_x1_arr[i]+1):
-      plt.plot(point_x1_arr[i],point_x2_arr[i],'b--',marker = 'x', color = 'g')
+      plt.plot(point_x1_arr[i],point_x2_arr[i],&#39;b--&#39;,marker = &#39;x&#39;, color = &#39;g&#39;)
     else:
-      plt.plot(point_x1_arr[i],point_x2_arr[i],'r--',marker = '+', color = 'r')
+      plt.plot(point_x1_arr[i],point_x2_arr[i],&#39;r--&#39;,marker = &#39;+&#39;, color = &#39;r&#39;)
   plt.xlabel(&quot;x1&quot;)
   plt.ylabel(&quot;x2&quot;)
   plt.figure(figsize=(8, 4))
@@ -466,11 +479,10 @@ if __name__== &quot;__main__&quot;:
   showPic(xita[1],xita[0],x1_arr,x2_arr)
   print(xita)
 </code></pre>
-<p>得到\({\theta _0}\)和\({\theta _1}\)分别为<br />
-2.7762287194293407, 4.835356147838368。得到的曲线如下：</p>
+<p>得到\({\theta _0}\)和\({\theta _1}\)分别为<br>2.7762287194293407, 4.835356147838368。得到的曲线如下：</p>
 <img src="/images/机器学习/监督学习-分类问题计算结果3.png" width=50% height=50% text-align=center/>
-<h2 id="6-参考文献"><a class="markdownIt-Anchor" href="#6-参考文献"></a> 6 参考文献</h2>
-<ul>
+
+<h2 id="6-参考文献"><a href="#6-参考文献" class="headerlink" title="6 参考文献"></a>6 参考文献</h2><ul>
 <li>1 &lt;&lt; cs229-notes1 &gt;&gt;</li>
 <li>2 &lt;&lt; 计算机科学计算 &gt;&gt; 施吉林,张宏伟，金光日编</li>
 </ul>
@@ -481,7 +493,7 @@ if __name__== &quot;__main__&quot;:
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2017/06/13/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-2.2-%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0%E4%B9%8B%E5%88%86%E7%B1%BB/" data-id="cuidTk2Lj0ZKefsbuc3JWyWOQ" data-title="机器学习 2.2 监督学习之逻辑回归" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2017/06/13/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-2.2-%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0%E4%B9%8B%E5%88%86%E7%B1%BB/" data-id="cuidWYApzZrsDTvQnGSSVxgWV" data-title="机器学习 2.2 监督学习之逻辑回归" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -526,7 +538,7 @@ if __name__== &quot;__main__&quot;:
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2017/06/10/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-2.1-%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0%E4%B9%8B%E7%BA%BF%E6%80%A7%E5%9B%9E%E5%BD%92/" data-id="cuidugIPRaROUeCgA1S2d1CfA" data-title="机器学习 2.1 监督学习之线性回归" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2017/06/10/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-2.1-%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0%E4%B9%8B%E7%BA%BF%E6%80%A7%E5%9B%9E%E5%BD%92/" data-id="cuid5e93Psb-1Ywv7xFjpBwhM" data-title="机器学习 2.1 监督学习之线性回归" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -571,7 +583,7 @@ if __name__== &quot;__main__&quot;:
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2017/06/10/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-1-%E7%BB%AA%E8%AE%BA/" data-id="cuidvhAK-YfIqwvooaK_cyjZp" data-title="机器学习 1 绪论" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2017/06/10/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-1-%E7%BB%AA%E8%AE%BA/" data-id="cuidYM3NAT2psBN-VkUZ2qsPf" data-title="机器学习 1 绪论" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -643,11 +655,11 @@ if __name__== &quot;__main__&quot;:
           </li>
         
           <li>
-            <a href="/2023/12/25/RSS-%E8%BF%9C%E7%A8%8BMerge%E7%9A%84%E8%AE%BE%E8%AE%A1/">RSS-远程Merge的设计</a>
+            <a href="/2023/12/25/RSS-%E8%BF%9C%E7%A8%8BMerge%E7%9A%84%E8%AE%BE%E8%AE%A1EN/">RSS-Remote Merge Design</a>
           </li>
         
           <li>
-            <a href="/2023/12/25/RSS-%E8%BF%9C%E7%A8%8BMerge%E7%9A%84%E8%AE%BE%E8%AE%A1EN/">RSS-Remote Merge Design</a>
+            <a href="/2023/12/25/RSS-%E8%BF%9C%E7%A8%8BMerge%E7%9A%84%E8%AE%BE%E8%AE%A1/">RSS-远程Merge的设计</a>
           </li>
         
           <li>

@@ -6,12 +6,12 @@
   
   <title>Hexo</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-  <meta name="description" content="title: 机器学习-2.8-监督学习之k近邻算法 date: 2017-10-15 20:29:06 tags: [机器学习]   K近邻算法 K近邻算法是一种常用的监督学习算法。其工作机制非常简单: 给定测试样本，基于某种距离度量找到与测试样本最近的k个训练样本，然后可以根据k个样本决定分类。譬如可以选择k个样本中最多的测试样本进行分类。 下面我们使用k近邻算法识别手写数字。手写数字为一">
+  <meta name="description" content="title: 机器学习-2.8-监督学习之k近邻算法date: 2017-10-15 20:29:06tags: [机器学习]   K近邻算法K近邻算法是一种常用的监督学习算法。其工作机制非常简单: 给定测试样本，基于某种距离度量找到与测试样本最近的k个训练样本，然后可以根据k个样本决定分类。譬如可以选择k个样本中最多的测试样本进行分类。 下面我们使用k近邻算法识别手写数字。手写数字为一个32*">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Hexo">
 <meta property="og:url" content="http://example.com/2025/02/07/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-2-8-%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0%E4%B9%8Bk%E8%BF%91%E9%82%BB%E7%AE%97%E6%B3%95/index.html">
 <meta property="og:site_name" content="Hexo">
-<meta property="og:description" content="title: 机器学习-2.8-监督学习之k近邻算法 date: 2017-10-15 20:29:06 tags: [机器学习]   K近邻算法 K近邻算法是一种常用的监督学习算法。其工作机制非常简单: 给定测试样本，基于某种距离度量找到与测试样本最近的k个训练样本，然后可以根据k个样本决定分类。譬如可以选择k个样本中最多的测试样本进行分类。 下面我们使用k近邻算法识别手写数字。手写数字为一">
+<meta property="og:description" content="title: 机器学习-2.8-监督学习之k近邻算法date: 2017-10-15 20:29:06tags: [机器学习]   K近邻算法K近邻算法是一种常用的监督学习算法。其工作机制非常简单: 给定测试样本，基于某种距离度量找到与测试样本最近的k个训练样本，然后可以根据k个样本决定分类。譬如可以选择k个样本中最多的测试样本进行分类。 下面我们使用k近邻算法识别手写数字。手写数字为一个32*">
 <meta property="og:locale" content="en_US">
 <meta property="article:published_time" content="2025-02-07T08:06:18.199Z">
 <meta property="article:modified_time" content="2025-11-19T02:35:29.253Z">
@@ -85,95 +85,92 @@
     
     <div class="e-content article-entry" itemprop="articleBody">
       
-        <hr />
-<h2 id="title-机器学习-28-监督学习之k近邻算法date-2017-10-15-202906tags-机器学习"><a class="markdownIt-Anchor" href="#title-机器学习-28-监督学习之k近邻算法date-2017-10-15-202906tags-机器学习"></a> title: 机器学习-2.8-监督学习之k近邻算法<br />
-date: 2017-10-15 20:29:06<br />
-tags: [机器学习]</h2>
-<script type="text/javascript" src="/Users/zcy/Desktop/study/git/MathJax-master/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-<h1 id="k近邻算法"><a class="markdownIt-Anchor" href="#k近邻算法"></a> K近邻算法</h1>
-<p>K近邻算法是一种常用的监督学习算法。其工作机制非常简单: 给定测试样本，基于某种距离度量找到与测试样本最近的k个训练样本，然后可以根据k个样本决定分类。譬如可以选择k个样本中最多的测试样本进行分类。</p>
+        <hr>
+<h2 id="title-机器学习-2-8-监督学习之k近邻算法date-2017-10-15-20-29-06tags-机器学习"><a href="#title-机器学习-2-8-监督学习之k近邻算法date-2017-10-15-20-29-06tags-机器学习" class="headerlink" title="title: 机器学习-2.8-监督学习之k近邻算法date: 2017-10-15 20:29:06tags: [机器学习]"></a>title: 机器学习-2.8-监督学习之k近邻算法<br>date: 2017-10-15 20:29:06<br>tags: [机器学习]</h2><script type="text/javascript" src="/Users/zcy/Desktop/study/git/MathJax-master/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+
+<h1 id="K近邻算法"><a href="#K近邻算法" class="headerlink" title="K近邻算法"></a>K近邻算法</h1><p>K近邻算法是一种常用的监督学习算法。其工作机制非常简单: 给定测试样本，基于某种距离度量找到与测试样本最近的k个训练样本，然后可以根据k个样本决定分类。譬如可以选择k个样本中最多的测试样本进行分类。</p>
 <p>下面我们使用k近邻算法识别手写数字。手写数字为一个32*32维的向量，我们可以把它看成一个1024维的向量。然后任意两个样本的距离完全可以通过计算1024维上的两个点之间的距离获得，然后我们可以找到与测试样本距离最近的的10个样本，其中最多的分类我们认为他就是测试样本的分类。具体代码如下：</p>
-<pre class="highlight"><code class="python"><span class="keyword">import</span> numpy <span class="keyword">as</span> np
-<span class="keyword">import</span> os
-<span class="keyword">from</span> numpy <span class="keyword">import</span> linalg
+<pre><code class="language-python">import numpy as np
+import os
+from numpy import linalg
 
-<span class="keyword">global</span> g_train
-<span class="keyword">global</span> g_label
+global g_train
+global g_label
 
-<span class="keyword">def</span> <span class="title function_">makeTrain</span>(<span class="params"><span class="built_in">dir</span></span>):
-  dirs=os.listdir(<span class="built_in">dir</span>)
-  files = <span class="built_in">filter</span>(<span class="keyword">lambda</span> item:<span class="keyword">not</span> os.path.isdir(item), dirs)
+def makeTrain(dir):
+  dirs=os.listdir(dir)
+  files = filter(lambda item:not os.path.isdir(item), dirs)
   mat = []
   label = []
 
-  <span class="keyword">for</span> file <span class="keyword">in</span> files:
+  for file in files:
     arr = []
-    f = <span class="built_in">open</span>(<span class="built_in">dir</span>+<span class="string">&quot;/&quot;</span>+file)
-    <span class="keyword">while</span> <span class="literal">True</span>:
+    f = open(dir+&quot;/&quot;+file)
+    while True:
       line = f.readline()
-      <span class="keyword">if</span> <span class="keyword">not</span> line:
-        <span class="keyword">break</span>
-      <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(<span class="built_in">len</span>(line)-<span class="number">1</span>):        <span class="comment"># line[len(line)]=&#x27;\n&#x27;</span>
-        arr.append(<span class="built_in">int</span>(line[i]))
+      if not line:
+        break
+      for i in range(len(line)-1):        # line[len(line)]=&#39;\n&#39;
+        arr.append(int(line[i]))
     mat.append(arr)
-    label.append(<span class="built_in">int</span>(file.split(<span class="string">&quot;_&quot;</span>)[<span class="number">0</span>]))
-  <span class="keyword">return</span> (np.array(mat),np.array(label))
+    label.append(int(file.split(&quot;_&quot;)[0]))
+  return (np.array(mat),np.array(label))
 
-<span class="keyword">def</span> <span class="title function_">testClassify</span>(<span class="params"><span class="built_in">dir</span></span>):
-  dirs=os.listdir(<span class="built_in">dir</span>)
-  files = <span class="built_in">filter</span>(<span class="keyword">lambda</span> item:<span class="keyword">not</span> os.path.isdir(item), dirs)
+def testClassify(dir):
+  dirs=os.listdir(dir)
+  files = filter(lambda item:not os.path.isdir(item), dirs)
   mat = []
-  right=<span class="number">0</span>
-  wrong=<span class="number">0</span>
-  <span class="keyword">for</span> file <span class="keyword">in</span> files:
+  right=0
+  wrong=0
+  for file in files:
     arr = []
-    f = <span class="built_in">open</span>(<span class="built_in">dir</span>+<span class="string">&quot;/&quot;</span>+file)
-    <span class="keyword">while</span> <span class="literal">True</span>:
+    f = open(dir+&quot;/&quot;+file)
+    while True:
       line = f.readline()
-      <span class="keyword">if</span> <span class="keyword">not</span> line:
-        <span class="keyword">break</span>
-      <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(<span class="built_in">len</span>(line)-<span class="number">1</span>):        <span class="comment"># line[len(line)]=&#x27;\n&#x27;</span>
-        arr.append(<span class="built_in">int</span>(line[i]))
+      if not line:
+        break
+      for i in range(len(line)-1):        # line[len(line)]=&#39;\n&#39;
+        arr.append(int(line[i]))
     mat.append(arr)
-    testLabel = file.split(<span class="string">&quot;_&quot;</span>)[<span class="number">0</span>]
-    label=classify(np.array(arr),<span class="number">10</span>)
-    <span class="keyword">if</span> testLabel == label:
-      right=right+<span class="number">1</span>
-    <span class="keyword">else</span>:
-      wrong=wrong+<span class="number">1</span>
-  <span class="built_in">print</span>(<span class="string">&quot;right=&quot;</span>,right,<span class="string">&quot;, wrong=&quot;</span>,wrong)
+    testLabel = file.split(&quot;_&quot;)[0]
+    label=classify(np.array(arr),10)
+    if testLabel == label:
+      right=right+1
+    else:
+      wrong=wrong+1
+  print(&quot;right=&quot;,right,&quot;, wrong=&quot;,wrong)
 
-<span class="keyword">def</span> <span class="title function_">classify</span>(<span class="params">vec,k</span>):
-  <span class="comment"># 计算各个训练数据与测试数据的距离</span>
-  m = <span class="built_in">len</span>(g_label)
+def classify(vec,k):
+  # 计算各个训练数据与测试数据的距离
+  m = len(g_label)
   dis = []
-  <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(m):
+  for i in range(m):
     dis.append([linalg.norm(vec-g_train[i]),g_label[i]])
-  dis = <span class="built_in">sorted</span>(dis, key=<span class="keyword">lambda</span> v:v[<span class="number">0</span>])
+  dis = sorted(dis, key=lambda v:v[0])
 
-  <span class="comment"># 计算相似度最高的k个值，这里写入map做累积</span>
+  # 计算相似度最高的k个值，这里写入map做累积
   dic = {}
-  <span class="keyword">for</span> j <span class="keyword">in</span> <span class="built_in">range</span>(k):
-    <span class="keyword">if</span> <span class="keyword">not</span> <span class="built_in">str</span>(dis[j][<span class="number">1</span>]) <span class="keyword">in</span> dic:
-      dic[<span class="built_in">str</span>(dis[j][<span class="number">1</span>])]=<span class="number">1</span>
-    <span class="keyword">else</span>:
-      dic[<span class="built_in">str</span>(dis[j][<span class="number">1</span>])]=dic[<span class="built_in">str</span>(dis[j][<span class="number">1</span>])]+<span class="number">1</span>
-  <span class="keyword">return</span> <span class="built_in">max</span>(dic.items(), key=<span class="keyword">lambda</span> x: x[<span class="number">1</span>])[<span class="number">0</span>]
+  for j in range(k):
+    if not str(dis[j][1]) in dic:
+      dic[str(dis[j][1])]=1
+    else:
+      dic[str(dis[j][1])]=dic[str(dis[j][1])]+1
+  return max(dic.items(), key=lambda x: x[1])[0]
 
-<span class="keyword">if</span> __name__ == <span class="string">&quot;__main__&quot;</span>:
-  <span class="comment"># 1 formate trainning date</span>
-  (g_train,g_label) =makeTrain(<span class="string">&quot;/Users/zcy/Desktop/study/git/mlearning/res/trainingDigits1&quot;</span>)
+if __name__ == &quot;__main__&quot;:
+  # 1 formate trainning date
+  (g_train,g_label) =makeTrain(&quot;/Users/zcy/Desktop/study/git/mlearning/res/trainingDigits1&quot;)
 
-  <span class="comment"># 2 test</span>
-  testClassify(<span class="string">&quot;/Users/zcy/Desktop/study/git/mlearning/res/testDigits1&quot;</span>)
-
+  # 2 test
+  testClassify(&quot;/Users/zcy/Desktop/study/git/mlearning/res/testDigits1&quot;)
 </code></pre>
 <p>计算946个测试样本集，有926个为正确计算，20个为错误计算，识别为97.89%</p>
 
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2025/02/07/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-2-8-%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0%E4%B9%8Bk%E8%BF%91%E9%82%BB%E7%AE%97%E6%B3%95/" data-id="cuidSF-YQ4yfz35kB2dvc0klK" data-title="" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2025/02/07/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-2-8-%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0%E4%B9%8Bk%E8%BF%91%E9%82%BB%E7%AE%97%E6%B3%95/" data-id="cuid5zV4UwetSFyrDJdnGOIvW" data-title="" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -193,9 +190,9 @@ tags: [机器学习]</h2>
     </a>
   
   
-    <a href="/2023/12/25/RSS-%E8%BF%9C%E7%A8%8BMerge%E7%9A%84%E8%AE%BE%E8%AE%A1/" id="article-nav-older" class="article-nav-link-wrap">
+    <a href="/2023/12/25/RSS-%E8%BF%9C%E7%A8%8BMerge%E7%9A%84%E8%AE%BE%E8%AE%A1EN/" id="article-nav-older" class="article-nav-link-wrap">
       <strong class="article-nav-caption">Older</strong>
-      <div class="article-nav-title">RSS-远程Merge的设计</div>
+      <div class="article-nav-title">RSS-Remote Merge Design</div>
     </a>
   
 </nav>
@@ -255,11 +252,11 @@ tags: [机器学习]</h2>
           </li>
         
           <li>
-            <a href="/2023/12/25/RSS-%E8%BF%9C%E7%A8%8BMerge%E7%9A%84%E8%AE%BE%E8%AE%A1/">RSS-远程Merge的设计</a>
+            <a href="/2023/12/25/RSS-%E8%BF%9C%E7%A8%8BMerge%E7%9A%84%E8%AE%BE%E8%AE%A1EN/">RSS-Remote Merge Design</a>
           </li>
         
           <li>
-            <a href="/2023/12/25/RSS-%E8%BF%9C%E7%A8%8BMerge%E7%9A%84%E8%AE%BE%E8%AE%A1EN/">RSS-Remote Merge Design</a>
+            <a href="/2023/12/25/RSS-%E8%BF%9C%E7%A8%8BMerge%E7%9A%84%E8%AE%BE%E8%AE%A1/">RSS-远程Merge的设计</a>
           </li>
         
           <li>
