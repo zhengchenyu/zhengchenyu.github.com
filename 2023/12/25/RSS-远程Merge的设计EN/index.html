@@ -6,20 +6,21 @@
   
   <title>RSS-Remote Merge Design | Hexo</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-  <meta name="description" content="1 Default shuffle Note: The first chapter briefly introduces the principle of default shuffle, with the purpose of find where local disks are used, then design remote merge. If you know enough, you ca">
+  <meta name="description" content="1 Default shuffle  Note: The first chapter briefly introduces the principle of default shuffle, with the purpose of find where local disks are used, then design remote merge. If you know enough, you">
 <meta property="og:type" content="article">
 <meta property="og:title" content="RSS-Remote Merge Design">
 <meta property="og:url" content="http://example.com/2023/12/25/RSS-%E8%BF%9C%E7%A8%8BMerge%E7%9A%84%E8%AE%BE%E8%AE%A1EN/index.html">
 <meta property="og:site_name" content="Hexo">
-<meta property="og:description" content="1 Default shuffle Note: The first chapter briefly introduces the principle of default shuffle, with the purpose of find where local disks are used, then design remote merge. If you know enough, you ca">
+<meta property="og:description" content="1 Default shuffle  Note: The first chapter briefly introduces the principle of default shuffle, with the purpose of find where local disks are used, then design remote merge. If you know enough, you">
 <meta property="og:locale" content="en_US">
 <meta property="og:image" content="http://example.com/images/rss/on_demand_merge.png">
 <meta property="og:image" content="http://example.com/images/rss/remote_merge_structure.png">
 <meta property="og:image" content="http://example.com/images/rss/remote_merge_from_record_perspective.jpg">
 <meta property="og:image" content="http://example.com/images/rss/rm_records_reader.png">
 <meta property="article:published_time" content="2023-12-25T10:58:15.000Z">
-<meta property="article:modified_time" content="2025-02-07T08:06:18.198Z">
+<meta property="article:modified_time" content="2025-11-19T02:35:29.266Z">
 <meta property="article:author" content="zhengchenyu">
+<meta property="article:tag" content="RSS">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:image" content="http://example.com/images/rss/on_demand_merge.png">
   
@@ -100,20 +101,25 @@
     
     <div class="e-content article-entry" itemprop="articleBody">
       
-        <h1 id="1-Default-shuffle"><a href="#1-Default-shuffle" class="headerlink" title="1 Default shuffle"></a>1 Default shuffle</h1><blockquote>
+        <h1 id="1-default-shuffle"><a class="markdownIt-Anchor" href="#1-default-shuffle"></a> 1 Default shuffle</h1>
+<blockquote>
 <p>Note: The first chapter briefly introduces the principle of default shuffle, with the purpose of find where local disks are used, then design remote merge. If you know enough, you can ignore this part.</p>
 </blockquote>
 <p>We will analyze the shuffle of MapReduce, Tez, and Spark in turn.</p>
-<h2 id="1-1-MapReduce"><a href="#1-1-MapReduce" class="headerlink" title="1.1 MapReduce"></a>1.1 MapReduce</h2><p>Map writes the record to the memory. When the memory exceeds the threshold, the memory data is spilled to the disk file, and the Record is written to the disk file in order of partitionid+key. After Map has processed all records, it will spill the data currently in memory to a disk file. Then read all the files spilled to the disk and merge them in the order of partitionid+key to get the sorted Records.</p>
+<h2 id="11-mapreduce"><a class="markdownIt-Anchor" href="#11-mapreduce"></a> 1.1 MapReduce</h2>
+<p>Map writes the record to the memory. When the memory exceeds the threshold, the memory data is spilled to the disk file, and the Record is written to the disk file in order of partitionid+key. After Map has processed all records, it will spill the data currently in memory to a disk file. Then read all the files spilled to the disk and merge them in the order of partitionid+key to get the sorted Records.</p>
 <blockquote>
 <p>Note: The purpose of sorting according to partitionid is that when the Reduce side obtains the data from the Map side, it should be read as sequentially as possible. For MR, Tez, and Spark, regardless of whether they are sorted or not, as long as there are partitioned, they need to be sorted according to partitionid.</p>
 </blockquote>
 <p>The reduce will pull the records of the corresponding partition remotely or locally from the Map, which is called MapOutput. Under normal circumstances, the memory will be used directly. If the memory exceeds the threshold, these records will be written to the disk. Then the reduce will perform merge operations on MapOutputs using minimum heap K-way merge sorting to obtain globally sorted records. During the Merge process, temporary results may be spilled to disk because the memory exceeds the threshold. In addition, if there are too many files spilled to disk, additional merges will be triggered.</p>
-<h2 id="1-2-Tez"><a href="#1-2-Tez" class="headerlink" title="1.2 Tez"></a>1.2 Tez</h2><p>There are two cases of tez: (1) ordered io  (2) unordered io.</p>
+<h2 id="12-tez"><a class="markdownIt-Anchor" href="#12-tez"></a> 1.2 Tez</h2>
+<p>There are two cases of tez: (1) ordered io  (2) unordered io.</p>
 <p>Ordered io is the same as MapReduce and so ignore it here.</p>
 <p>Unordered io is generally used in hashjoin and other situations where keys are not required for sorting. Non-sorted io adopts a ready-to-use solution. Map writes the Record directly to the file or writes it to the file through cache. The Reduce side can also read and use it when reading data.</p>
-<h2 id="1-3-Spark"><a href="#1-3-Spark" class="headerlink" title="1.3 Spark"></a>1.3 Spark</h2><p>Spark’s shuffle is more complex and more reasonable. Some tasks do not require sort and combine, so spark users can determine the shuffle logic according to their needs.</p>
-<h3 id="1-3-1-Shuffle-write-operation"><a href="#1-3-1-Shuffle-write-operation" class="headerlink" title="1.3.1 Shuffle write operation"></a>1.3.1 Shuffle write operation</h3><p>When writing shuffle data, three writers are supported:</p>
+<h2 id="13-spark"><a class="markdownIt-Anchor" href="#13-spark"></a> 1.3 Spark</h2>
+<p>Spark’s shuffle is more complex and more reasonable. Some tasks do not require sort and combine, so spark users can determine the shuffle logic according to their needs.</p>
+<h3 id="131-shuffle-write-operation"><a class="markdownIt-Anchor" href="#131-shuffle-write-operation"></a> 1.3.1 Shuffle write operation</h3>
+<p>When writing shuffle data, three writers are supported:</p>
 <ul>
 <li>(1) BypassMergeSortShuffleWriter</li>
 </ul>
@@ -130,7 +136,9 @@
 <p>SortShuffleWriter mainly implements specific logic through ExternalSorter. ExternalSorter decides whether to combine and sort based on the user’s needs.</p>
 <p>When writing record, it will be inserted directly into memory. If combine is required, the memory architecture is map, otherwise it is buffer.</p>
 <p>If the current evaluation memory is greater than the threshold, the spill operation will be triggered. During the spill operation, the Record will be spilled to the disk. This process requires sorting. The specific comparator will use different values according to different user needs. If keyordering is set, it will be sorted by key. If keyordering is not set, but aggregator (i.e. combine) is set, the keys are sorted according to  the hashcode of key, thus ensuring that the same keys are organized together to facilitate combine operations. If neither keyordering nor aggregator is set, it will be sorted according to partition.</p>
-<p>When all Records are written, the spill files need to be read and merged into a globally ordered file.<br>​<br>Comparison of three writers</p>
+<p>When all Records are written, the spill files need to be read and merged into a globally ordered file.<br />
+​<br />
+Comparison of three writers</p>
 <table>
 <thead>
 <tr>
@@ -140,7 +148,8 @@
 <th>scene</th>
 </tr>
 </thead>
-<tbody><tr>
+<tbody>
+<tr>
 <td>BypassMergeSortShuffleWriter</td>
 <td>(1) Only serialized once. <br>(2) Using hashmap-like data structure, inserting data is fast.</td>
 <td>(1) Combine and sort are not supported <br>(2) Each partition must generate a temporary file, which will generate too many temporary files.</td>
@@ -158,9 +167,15 @@
 <td>(1) Multiple serializations are required</td>
 <td>Suitable for all scenarios.</td>
 </tr>
-</tbody></table>
-<h3 id="1-3-2-shuffle-read"><a href="#1-3-2-shuffle-read" class="headerlink" title="1.3.2 shuffle read"></a>1.3.2 shuffle read</h3><p>Currently there is only one implementation of BlockStoreShuffleReader. The implementation is similar to MapReduce.<br>The reduce will pull the records of the corresponding partition remotely or locally from the map. Under normal circumstances, it will be written directly to the memory, but if the block size to be obtained exceeds the threshold, will use disk.<br>Then it will be decided according to the user’s needs whether to combine or sort, and finally form a record iterator required by the user.<br>Combine and sort use ExternalAppendOnlyMap and ExternalSorter respectively. When the memory exceeds the threshold, the data will be spilled to the local disk.</p>
-<h2 id="1-4-Summary"><a href="#1-4-Summary" class="headerlink" title="1.4 Summary"></a>1.4 Summary</h2><p>(1) About the semantics of each framework</p>
+</tbody>
+</table>
+<h3 id="132-shuffle-read"><a class="markdownIt-Anchor" href="#132-shuffle-read"></a> 1.3.2 shuffle read</h3>
+<p>Currently there is only one implementation of BlockStoreShuffleReader. The implementation is similar to MapReduce.<br />
+The reduce will pull the records of the corresponding partition remotely or locally from the map. Under normal circumstances, it will be written directly to the memory, but if the block size to be obtained exceeds the threshold, will use disk.<br />
+Then it will be decided according to the user’s needs whether to combine or sort, and finally form a record iterator required by the user.<br />
+Combine and sort use ExternalAppendOnlyMap and ExternalSorter respectively. When the memory exceeds the threshold, the data will be spilled to the local disk.</p>
+<h2 id="14-summary"><a class="markdownIt-Anchor" href="#14-summary"></a> 1.4 Summary</h2>
+<p>(1) About the semantics of each framework</p>
 <p>For MapReduce and the ordered io of Tez, it is a special case of spark sorting. For Tez’s unordered io, it is essentially a special case of spark’s non-sorting. In essence, the semantics of each framework are the same, and spark is more general.</p>
 <p>(2) Where will generate local disk files?</p>
 <p>After analyzing the three computing frameworks, we learned that the following processes will use disks:</p>
@@ -171,20 +186,22 @@
 <li>(4) When merging on the reduce side, temporary disk files may be generated for global sorting.</li>
 </ul>
 <p>In fact, uniffle has solved (1), (2). For (3), if the parameters are adjusted effectively, it is difficult to generate disk files. In fact, only (4) needs to be discussed in this article.</p>
-<h1 id="2-Plans"><a href="#2-Plans" class="headerlink" title="2 Plans"></a>2 Plans</h1><p>In order to solve the problem that Merge on the Reduce side may spill to disk, there are two main solutions:</p>
+<h1 id="2-plans"><a class="markdownIt-Anchor" href="#2-plans"></a> 2 Plans</h1>
+<p>In order to solve the problem that Merge on the Reduce side may spill to disk, there are two main solutions:</p>
 <ul>
 <li>(1) Merge on Shuffle Server</li>
 <li>(2) Reduce side Merge on demand</li>
 </ul>
-<h2 id="2-1-Option-1-Merge-on-ShuffleServer"><a href="#2-1-Option-1-Merge-on-ShuffleServer" class="headerlink" title="2.1 Option 1: Merge on ShuffleServer"></a>2.1 Option 1: Merge on ShuffleServer</h2><p>Move the merge process of reduce to the ShuffleServer side. ShuffleServer will merge the locally sorted Records sent from the map side into a globally sorted records sequence. The reduce side reads directly in the order of the records sequence.</p>
+<h2 id="21-option-1-merge-on-shuffleserver"><a class="markdownIt-Anchor" href="#21-option-1-merge-on-shuffleserver"></a> 2.1 Option 1: Merge on ShuffleServer</h2>
+<p>Move the merge process of reduce to the ShuffleServer side. ShuffleServer will merge the locally sorted Records sent from the map side into a globally sorted records sequence. The reduce side reads directly in the order of the records sequence.</p>
 <ul>
 <li>Advantages: Does not require too much memory and network RPC.</li>
 <li>Disadvantages: Shuffle Server needs to parse Key, Value and Comparator. The Shuffle side cannot combine.</li>
 </ul>
-<h2 id="2-2-Option-2-On-demand-Merge-on-the-Reduce-side"><a href="#2-2-Option-2-On-demand-Merge-on-the-Reduce-side" class="headerlink" title="2.2 Option 2: On-demand Merge on the Reduce side"></a>2.2 Option 2: On-demand Merge on the Reduce side</h2><img src="/images/rss/on_demand_merge.png" width=50% height=50% text-align=center/>
+<h2 id="22-option-2-on-demand-merge-on-the-reduce-side"><a class="markdownIt-Anchor" href="#22-option-2-on-demand-merge-on-the-reduce-side"></a> 2.2 Option 2: On-demand Merge on the Reduce side</h2>
+<img src="/images/rss/on_demand_merge.png" width=50% height=50% text-align=center/>
 Since the memory on the reduce side is limited, in order to avoid spilling data to disk when merging on the reduce side. When reduce obtains segment, it can only read part of the buffer of each segment, and then merge all the buffers. Then when the partial buffer reading of a certain segment is completed, the next buffer of this segment will continue to be read, and this buffer will continue to be added to the merge process.
 There is a problem with this. The number of times the Reduce side reads data from ShuffleServer is approximately segments_num * (segment_size / buffer_size), which is a large value for large tasks. Too many RPCs means decreased performance.
-
 <blockquote>
 <p>The segment here refers to the sorted record collection, which can be understood as the block in which the records have been sorted according to key.</p>
 </blockquote>
@@ -193,60 +210,96 @@ There is a problem with this. The number of times the Reduce side reads data fro
 <li>Disadvantages: Too many RPCs.</li>
 </ul>
 <p>**This article chooses option 1, and the following content mainly discusses option 1. **</p>
-<h1 id="3-Demand-analysis"><a href="#3-Demand-analysis" class="headerlink" title="3 Demand analysis"></a>3 Demand analysis</h1><h2 id="3-1-What-types-of-tasks-require-remote-merge"><a href="#3-1-What-types-of-tasks-require-remote-merge" class="headerlink" title="3.1 What types of tasks require remote merge?"></a>3.1 What types of tasks require remote merge?</h2><p>Currently, uniffle’s map-side no longer spill disk. This article mainly considers the situation on the reduce. Mainly divided into the following situations:</p>
+<h1 id="3-demand-analysis"><a class="markdownIt-Anchor" href="#3-demand-analysis"></a> 3 Demand analysis</h1>
+<h2 id="31-what-types-of-tasks-require-remote-merge"><a class="markdownIt-Anchor" href="#31-what-types-of-tasks-require-remote-merge"></a> 3.1 What types of tasks require remote merge?</h2>
+<p>Currently, uniffle’s map-side no longer spill disk. This article mainly considers the situation on the reduce. Mainly divided into the following situations:</p>
 <ul>
 <li>(1) For spark’s non-sorted, non-aggregated, tez unordered io. It does not require any global aggregation and sorting operations, and only requires very little memory. The current version of uniffle will not use disk if related settings are reasonable. Just use the current uniffle solution. This article will not discuss this aspect.</li>
-<li>(2) For spark sorting or aggregation tasks, tez ordered io, mapreduce, due to the need for global sorting or aggregation, the memory may not be enough, and the record may be spilled to the disk. This article mainly discusses this situation.<br>**In summary, it can be seen that remote merge is only used for shuffles that require sorting or aggregation. **</li>
+<li>(2) For spark sorting or aggregation tasks, tez ordered io, mapreduce, due to the need for global sorting or aggregation, the memory may not be enough, and the record may be spilled to the disk. This article mainly discusses this situation.<br />
+**In summary, it can be seen that remote merge is only used for shuffles that require sorting or aggregation. **</li>
 </ul>
-<h2 id="3-2-How-does-ShuffleServer-sort"><a href="#3-2-How-does-ShuffleServer-sort" class="headerlink" title="3.2 How does ShuffleServer sort?"></a>3.2 How does ShuffleServer sort?</h2><p>For sorting, map is generally sorted to obtain a set of partially sorted records, which is called segment here. Then reduce will obtain all segments and merge them. Spark, MR, and Tez all use minimum heap K-way merge sorting. This method can still be used for remote sorting.</p>
+<h2 id="32-how-does-shuffleserver-sort"><a class="markdownIt-Anchor" href="#32-how-does-shuffleserver-sort"></a> 3.2 How does ShuffleServer sort?</h2>
+<p>For sorting, map is generally sorted to obtain a set of partially sorted records, which is called segment here. Then reduce will obtain all segments and merge them. Spark, MR, and Tez all use minimum heap K-way merge sorting. This method can still be used for remote sorting.</p>
 <p>BufferManager and FlushManager maintain block information in memory and disk. We only need to add MergeManager to ShuffleServer and merge the blocks under the same Shuffle to obtain globally sorted Records.</p>
 <p>Introducing sorting on the ShuffleServer produces a side effect: the Shuffle’s KeyClass, ValueClass and KeyComparator need to be passed to ShuffleServer.</p>
-<h2 id="3-3-How-does-ShuffleServer-combine"><a href="#3-3-How-does-ShuffleServer-combine" class="headerlink" title="3.3 How does ShuffleServer combine?"></a>3.3 How does ShuffleServer combine?</h2><p>Combine is generally a user-defined operation, so ShuffleServer is prohibited from performing combine operations. If combine is performed on the Reduce side, wouldn’t it violate our theme of avoiding spill to disk on the task side? In fact we don’t have to use ExternalAppendOnlyMap for combine. If the Records obtained from ShuffleServer are sorted by key, it means that the same keys have been organized together, and only a small amount of memory is needed to combine.</p>
-<h2 id="3-4-How-does-Writer-write"><a href="#3-4-How-does-Writer-write" class="headerlink" title="3.4 How does Writer write?"></a>3.4 How does Writer write?</h2><p>Just write it the way we have it.</p>
-<h2 id="3-5-How-does-Reader-read"><a href="#3-5-How-does-Reader-read" class="headerlink" title="3.5 How does Reader read?"></a>3.5 How does Reader read?</h2><p>Currently, Uniffle’s shuffle reader uses blockid as the read mark, which makes it easy to verify whether an accurate and complete records are obtained. For remote merge, MergeManager has merged the original Block collection into a new sequence sorted records by key. Therefore, the blockid generated by the map segment cannot be used:<br>We will use a new way to read Records. When MergerManager performs global Merge, an index will be generated. Reader will read according to this index.</p>
+<h2 id="33-how-does-shuffleserver-combine"><a class="markdownIt-Anchor" href="#33-how-does-shuffleserver-combine"></a> 3.3 How does ShuffleServer combine?</h2>
+<p>Combine is generally a user-defined operation, so ShuffleServer is prohibited from performing combine operations. If combine is performed on the Reduce side, wouldn’t it violate our theme of avoiding spill to disk on the task side? In fact we don’t have to use ExternalAppendOnlyMap for combine. If the Records obtained from ShuffleServer are sorted by key, it means that the same keys have been organized together, and only a small amount of memory is needed to combine.</p>
+<h2 id="34-how-does-writer-write"><a class="markdownIt-Anchor" href="#34-how-does-writer-write"></a> 3.4 How does Writer write?</h2>
+<p>Just write it the way we have it.</p>
+<h2 id="35-how-does-reader-read"><a class="markdownIt-Anchor" href="#35-how-does-reader-read"></a> 3.5 How does Reader read?</h2>
+<p>Currently, Uniffle’s shuffle reader uses blockid as the read mark, which makes it easy to verify whether an accurate and complete records are obtained. For remote merge, MergeManager has merged the original Block collection into a new sequence sorted records by key. Therefore, the blockid generated by the map segment cannot be used:<br />
+We will use a new way to read Records. When MergerManager performs global Merge, an index will be generated. Reader will read according to this index.</p>
 <blockquote>
 <p>Note: In principle, using key as a read index is more semantic, and the first version of the demo program was also implemented by this way. However, this proposal was not friendly enough to deal with the problem of data skew, so  gave up the plan.</p>
 </blockquote>
-<h1 id="4-Scheme-Design"><a href="#4-Scheme-Design" class="headerlink" title="4 Scheme Design"></a>4 Scheme Design</h1><h2 id="4-1-Basic-procedures-for-RemoteMerge"><a href="#4-1-Basic-procedures-for-RemoteMerge" class="headerlink" title="4.1 Basic procedures for RemoteMerge"></a>4.1 Basic procedures for RemoteMerge</h2><img src="/images/rss/remote_merge_structure.png" width=50% height=50% text-align=center/>
-
+<h1 id="4-scheme-design"><a class="markdownIt-Anchor" href="#4-scheme-design"></a> 4 Scheme Design</h1>
+<h2 id="41-basic-procedures-for-remotemerge"><a class="markdownIt-Anchor" href="#41-basic-procedures-for-remotemerge"></a> 4.1 Basic procedures for RemoteMerge</h2>
+<img src="/images/rss/remote_merge_structure.png" width=50% height=50% text-align=center/>
 <p>The following introduces the process of Remote Merge:</p>
 <ul>
-<li>(1) Register<br>When AM&#x2F;Driver calls the registerShuffle method, it will additionally register keyClass, valueClass and keyComparator. This information is mainly used by ShuffleServer to parse and sort the Record during merging.</li>
-<li>(2) sendShuffleData<br>The sendShuffleData logic is basically consistent with existing RSS tasks. The only difference is the use of unified serializers and deserializers, which ensures that ShuffleServer can parse the Record normally no matter which framework it is.</li>
-<li>(3) buffer and flush<br>The shuffle server will store the data in the cache, or cache it to the local file system or remote file system through the flush manager. The logic of the original ShuffleServer is still reused here.</li>
-<li>(4) reportUniqueBlocks<br>A new API is provided, reportUniqueBlocks. The Reduce end will deduplicate the blocks generated by the map, and then send the valid block set to ShuffleServer through reportUniqueBlocks. After ShuffleServer receives a valid blocks collection, it will trigger Remote Merge. The results of Remote Merge will be written to the bufferPool like a normal block, and may be flushed to disk when necessary. The result generated by RemoteMerge is an ordinary block, but for convenience of explanation, it is called merged block here. The merged block records the results sorted by key, so when reading the merged block, you need to read it in ascending order in the order of blockid.</li>
-<li>(5) getSortedShuffleData<br>Reduce will read merged blocks in the order of block serial numbers, and then choose when to use them for reduce calculations based on certain conditions.</li>
+<li>(1) Register<br />
+When AM/Driver calls the registerShuffle method, it will additionally register keyClass, valueClass and keyComparator. This information is mainly used by ShuffleServer to parse and sort the Record during merging.</li>
+<li>(2) sendShuffleData<br />
+The sendShuffleData logic is basically consistent with existing RSS tasks. The only difference is the use of unified serializers and deserializers, which ensures that ShuffleServer can parse the Record normally no matter which framework it is.</li>
+<li>(3) buffer and flush<br />
+The shuffle server will store the data in the cache, or cache it to the local file system or remote file system through the flush manager. The logic of the original ShuffleServer is still reused here.</li>
+<li>(4) reportUniqueBlocks<br />
+A new API is provided, reportUniqueBlocks. The Reduce end will deduplicate the blocks generated by the map, and then send the valid block set to ShuffleServer through reportUniqueBlocks. After ShuffleServer receives a valid blocks collection, it will trigger Remote Merge. The results of Remote Merge will be written to the bufferPool like a normal block, and may be flushed to disk when necessary. The result generated by RemoteMerge is an ordinary block, but for convenience of explanation, it is called merged block here. The merged block records the results sorted by key, so when reading the merged block, you need to read it in ascending order in the order of blockid.</li>
+<li>(5) getSortedShuffleData<br />
+Reduce will read merged blocks in the order of block serial numbers, and then choose when to use them for reduce calculations based on certain conditions.</li>
 </ul>
-<h2 id="4-2-Analyze-the-process-from-the-perspective-of-Record"><a href="#4-2-Analyze-the-process-from-the-perspective-of-Record" class="headerlink" title="4.2 Analyze the process from the perspective of Record"></a>4.2 Analyze the process from the perspective of Record</h2><p>We can use WordCount as an example to explain the flow of record in the entire process. In this example, there are two partitions and one reduce, that is, one reduce processes the data of two partitions.</p>
+<h2 id="42-analyze-the-process-from-the-perspective-of-record"><a class="markdownIt-Anchor" href="#42-analyze-the-process-from-the-perspective-of-record"></a> 4.2 Analyze the process from the perspective of Record</h2>
+<p>We can use WordCount as an example to explain the flow of record in the entire process. In this example, there are two partitions and one reduce, that is, one reduce processes the data of two partitions.</p>
 <img src="/images/rss/remote_merge_from_record_perspective.jpg" width=50% height=50% text-align=center/>
-
 <ul>
-<li>(1) MAP side<br>After the document data is processed on the map side, it will be sorted. For Map1, since there are two partitions, records with odd numbers as keys will be written to block101, and records with even numbers as keys will be written to block102. The same goes for Map2. Note that the Records in the block here are all sorted.</li>
-<li>(2) Map side sends data<br>The map side sends the block to ShuffleServer through sendShuffleData, and ShuffleServer stores it in the bufferPool.<br>What I mean here is that when registering, the app named APP1 will also be registered, and the app named APP1@RemoteMerge will also be registered, which will be introduced later.</li>
-<li>(3) ShuffleServer side Merge<br>After reduce is started, reportUniqueBlocks will be called to report the available block set, and the corresponding partition in ShuffleServer will be triggered to merge. The result of Merge is a globally sorted record collection under this partition.<br>Then the question is where are the results of merge stored? The merge process occurs in memory. Whenever a certain number of records are merged, the results are written to a new block. In order to distinguish it from the original appid, this group of blocks will be managed in an appid ending with “@RemoteMerge”. The blockid of this new group of blocks increases from 1 and is sorted globally. That is, the records inside each block are sorted, and the records with blockid&#x3D;1 must be less than or equal to the records with blockid&#x3D;2.</li>
-<li>(4) Reduce end reading<br>According to the previous analysis, the reduce side only needs to read the block managed by the appid ending with “@RemoteMerge”. When reduce reads a block, it starts from the block with blockid&#x3D;1 and reads in the order of blockid. We know that when reduce performs calculations, it is calculated in order. Since the data we obtain on the ShuffleServer side is already sorted, we only need to obtain a small amount of data from the ShuffleServer side each time. This enables on-demand reading from the ShuffleServer side, which greatly reduces memory usage.<br>There are two special situations here, detailed in 5.5.​</li>
+<li>(1) MAP side<br />
+After the document data is processed on the map side, it will be sorted. For Map1, since there are two partitions, records with odd numbers as keys will be written to block101, and records with even numbers as keys will be written to block102. The same goes for Map2. Note that the Records in the block here are all sorted.</li>
+<li>(2) Map side sends data<br />
+The map side sends the block to ShuffleServer through sendShuffleData, and ShuffleServer stores it in the bufferPool.<br />
+What I mean here is that when registering, the app named APP1 will also be registered, and the app named APP1@RemoteMerge will also be registered, which will be introduced later.</li>
+<li>(3) ShuffleServer side Merge<br />
+After reduce is started, reportUniqueBlocks will be called to report the available block set, and the corresponding partition in ShuffleServer will be triggered to merge. The result of Merge is a globally sorted record collection under this partition.<br />
+Then the question is where are the results of merge stored? The merge process occurs in memory. Whenever a certain number of records are merged, the results are written to a new block. In order to distinguish it from the original appid, this group of blocks will be managed in an appid ending with “@RemoteMerge”. The blockid of this new group of blocks increases from 1 and is sorted globally. That is, the records inside each block are sorted, and the records with blockid=1 must be less than or equal to the records with blockid=2.</li>
+<li>(4) Reduce end reading<br />
+According to the previous analysis, the reduce side only needs to read the block managed by the appid ending with “@RemoteMerge”. When reduce reads a block, it starts from the block with blockid=1 and reads in the order of blockid. We know that when reduce performs calculations, it is calculated in order. Since the data we obtain on the ShuffleServer side is already sorted, we only need to obtain a small amount of data from the ShuffleServer side each time. This enables on-demand reading from the ShuffleServer side, which greatly reduces memory usage.<br />
+There are two special situations here, detailed in 5.5.​</li>
 </ul>
-<h1 id="5-Plan"><a href="#5-Plan" class="headerlink" title="5 Plan"></a>5 Plan</h1><h2 id="5-1-Unified-serializer"><a href="#5-1-Unified-serializer" class="headerlink" title="5.1 Unified serializer"></a>5.1 Unified serializer</h2><p>Since Merge needs to be performed on the ShuffleServer side, a unified serializer that is independent of the computing framework needs to be extracted. Two types of serializers are extracted here: (1) Writable (2) Kryo. Writable serialization is used for classes that handle the org.apache.hadoop.io.Writable interface, used in the MR and TEZ frameworks. Kryo can serialize most classes and is generally used in the Spark framework.</p>
-<h2 id="5-2-RecordsFileWriter-RecordFileReader"><a href="#5-2-RecordsFileWriter-RecordFileReader" class="headerlink" title="5.2 RecordsFileWriter&#x2F;RecordFileReader"></a>5.2 RecordsFileWriter&#x2F;RecordFileReader</h2><p>Provides abstract methods for processing Records</p>
-<h2 id="5-3-Merger"><a href="#5-3-Merger" class="headerlink" title="5.3 Merger"></a>5.3 Merger</h2><p>Provides basic Merger service to merge multiple data streams according to key. Minimum heap K-way merge sorting is used to merge and sort the data streams that have been partially sorted.</p>
-<h2 id="5-4-MergeManager"><a href="#5-4-MergeManager" class="headerlink" title="5.4 MergeManager"></a>5.4 MergeManager</h2><p>Used to merge Records on the server side.</p>
-<h2 id="5-5-Tools-for-reading-sorted-data"><a href="#5-5-Tools-for-reading-sorted-data" class="headerlink" title="5.5 Tools for reading sorted data"></a>5.5 Tools for reading sorted data</h2><p>Generally speaking, when the Reduce side reads data, it can be sent directly to downstream calculations. But there are two special situations:<br>(1) For situations where it is necessary to combine in Merge, we need to wait for all the same keys to arrive before combining, and then send them to the downstream.<br>(2) For spark and tez, the reduce end can read data from multiple partitions. Therefore, we need to merge the data of multiple partitions again on the reduce side, and then send it to the downstream.<br>RMRecordsReader is a tool for reading sorted data. The general structure is as follows:<br><img src="/images/rss/rm_records_reader.png" width=50% height=50% text-align=center/><br>The figure depicts a situation where a single Reduce processes two partitions. The RecordsFetcher thread will read the block of the corresponding partition and then parse it into Records. Then send it to combineBuffers. RecordCombiner reads Records from combineBuffer. When all records of a certain key are collected, a combine operation is performed. The result will be sent to mergedBuffer. RecordMerge will obtain all mergedBuffers and then merge and sort them again in memory. Finally, the global sorting results are obtained for downstream.</p>
-<h2 id="5-6-Framework-adaptation"><a href="#5-6-Framework-adaptation" class="headerlink" title="5.6 Framework adaptation"></a>5.6 Framework adaptation</h2><p>Compatible with MR, Tez, and Spark architectures.</p>
+<h1 id="5-plan"><a class="markdownIt-Anchor" href="#5-plan"></a> 5 Plan</h1>
+<h2 id="51-unified-serializer"><a class="markdownIt-Anchor" href="#51-unified-serializer"></a> 5.1 Unified serializer</h2>
+<p>Since Merge needs to be performed on the ShuffleServer side, a unified serializer that is independent of the computing framework needs to be extracted. Two types of serializers are extracted here: (1) Writable (2) Kryo. Writable serialization is used for classes that handle the org.apache.hadoop.io.Writable interface, used in the MR and TEZ frameworks. Kryo can serialize most classes and is generally used in the Spark framework.</p>
+<h2 id="52-recordsfilewriterrecordfilereader"><a class="markdownIt-Anchor" href="#52-recordsfilewriterrecordfilereader"></a> 5.2 RecordsFileWriter/RecordFileReader</h2>
+<p>Provides abstract methods for processing Records</p>
+<h2 id="53-merger"><a class="markdownIt-Anchor" href="#53-merger"></a> 5.3 Merger</h2>
+<p>Provides basic Merger service to merge multiple data streams according to key. Minimum heap K-way merge sorting is used to merge and sort the data streams that have been partially sorted.</p>
+<h2 id="54-mergemanager"><a class="markdownIt-Anchor" href="#54-mergemanager"></a> 5.4 MergeManager</h2>
+<p>Used to merge Records on the server side.</p>
+<h2 id="55-tools-for-reading-sorted-data"><a class="markdownIt-Anchor" href="#55-tools-for-reading-sorted-data"></a> 5.5 Tools for reading sorted data</h2>
+<p>Generally speaking, when the Reduce side reads data, it can be sent directly to downstream calculations. But there are two special situations:<br />
+(1) For situations where it is necessary to combine in Merge, we need to wait for all the same keys to arrive before combining, and then send them to the downstream.<br />
+(2) For spark and tez, the reduce end can read data from multiple partitions. Therefore, we need to merge the data of multiple partitions again on the reduce side, and then send it to the downstream.<br />
+RMRecordsReader is a tool for reading sorted data. The general structure is as follows:<br />
+<img src="/images/rss/rm_records_reader.png" width=50% height=50% text-align=center/><br />
+The figure depicts a situation where a single Reduce processes two partitions. The RecordsFetcher thread will read the block of the corresponding partition and then parse it into Records. Then send it to combineBuffers. RecordCombiner reads Records from combineBuffer. When all records of a certain key are collected, a combine operation is performed. The result will be sent to mergedBuffer. RecordMerge will obtain all mergedBuffers and then merge and sort them again in memory. Finally, the global sorting results are obtained for downstream.</p>
+<h2 id="56-framework-adaptation"><a class="markdownIt-Anchor" href="#56-framework-adaptation"></a> 5.6 Framework adaptation</h2>
+<p>Compatible with MR, Tez, and Spark architectures.</p>
 <blockquote>
 <p>I has used online application to conduct large-scale stress testing on MR and Tez. Spark has currently only tested some basic examples and still needs a lot of testing.</p>
 </blockquote>
-<h2 id="5-7-Isolated-classloader"><a href="#5-7-Isolated-classloader" class="headerlink" title="5.7 Isolated classloader"></a>5.7 Isolated classloader</h2><p>For different versions of keyclass, valueclass and comparatorclass, use isolated classloaders to load them.</p>
+<h2 id="57-isolated-classloader"><a class="markdownIt-Anchor" href="#57-isolated-classloader"></a> 5.7 Isolated classloader</h2>
+<p>For different versions of keyclass, valueclass and comparatorclass, use isolated classloaders to load them.</p>
 <blockquote>
-<p>Chinese version document: <a target="_blank" rel="noopener" href="https://zhengchenyu.github.io/2023/12/25/RSS-%E8%BF%9C%E7%A8%8BMerge%E7%9A%84%E8%AE%BE%E8%AE%A1/">https://zhengchenyu.github.io/2023/12/25/RSS-%E8%BF%9C%E7%A8%8BMerge%E7%9A%84%E8%AE%BE%E8%AE%A1/</a></p>
+<p>Chinese version document: <a target="_blank" rel="noopener" href="https://zhengchenyu.github.io/2023/12/25/RSS-%E8%BF%9C%E7%A8%8BMerge%E7%9A%84%E8%AE%BE%E8%AE%A1/">https://zhengchenyu.github.io/2023/12/25/RSS-远程Merge的设计/</a></p>
 </blockquote>
 
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2023/12/25/RSS-%E8%BF%9C%E7%A8%8BMerge%E7%9A%84%E8%AE%BE%E8%AE%A1EN/" data-id="cuidt1MNk5aAyz9hR9aQWn_Pq" data-title="RSS-Remote Merge Design" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2023/12/25/RSS-%E8%BF%9C%E7%A8%8BMerge%E7%9A%84%E8%AE%BE%E8%AE%A1EN/" data-id="cuid85am4ji4d386oIOigPyaK" data-title="RSS-Remote Merge Design" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
+  <ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/RSS/" rel="tag">RSS</a></li></ul>
+
     </footer>
   </div>
   
@@ -282,9 +335,23 @@ There is a problem with this. The number of times the Reduce side reads data fro
 
   
     
+  <div class="widget-wrap">
+    <h3 class="widget-title">Tags</h3>
+    <div class="widget">
+      <ul class="tag-list" itemprop="keywords"><li class="tag-list-item"><a class="tag-list-link" href="/tags/EC/" rel="tag">EC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/RSS/" rel="tag">RSS</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/" rel="tag">机器学习</a></li></ul>
+    </div>
+  </div>
+
 
   
     
+  <div class="widget-wrap">
+    <h3 class="widget-title">Tag Cloud</h3>
+    <div class="widget tagcloud">
+      <a href="/tags/EC/" style="font-size: 10px;">EC</a> <a href="/tags/RSS/" style="font-size: 15px;">RSS</a> <a href="/tags/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/" style="font-size: 20px;">机器学习</a>
+    </div>
+  </div>
+
   
     
   <div class="widget-wrap">
@@ -303,7 +370,11 @@ There is a problem with this. The number of times the Reduce side reads data fro
       <ul>
         
           <li>
-            <a href="/2025/02/07/ErasuceCode%E7%AE%97%E6%B3%95%E5%AE%9E%E7%8E%B0/">(no title)</a>
+            <a href="/2025/02/07/ErasuceCode%E7%AE%97%E6%B3%95%E6%8F%AD%E7%A7%98/">ErasuceCode算法揭秘</a>
+          </li>
+        
+          <li>
+            <a href="/2025/02/07/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-2-8-%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0%E4%B9%8Bk%E8%BF%91%E9%82%BB%E7%AE%97%E6%B3%95/">(no title)</a>
           </li>
         
           <li>
@@ -316,10 +387,6 @@ There is a problem with this. The number of times the Reduce side reads data fro
         
           <li>
             <a href="/2017/10/22/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-3-2-%E9%9D%9E%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0%E4%B9%8B%E4%B8%BB%E6%88%90%E5%88%86%E5%88%86%E6%9E%90/">机器学习-3.2-非监督学习之主成分分析.md</a>
-          </li>
-        
-          <li>
-            <a href="/2017/10/15/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-2-8-%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0%E4%B9%8Bk%E8%BF%91%E9%82%BB%E7%AE%97%E6%B3%95/">机器学习-2.8-监督学习之k近邻算法</a>
           </li>
         
       </ul>

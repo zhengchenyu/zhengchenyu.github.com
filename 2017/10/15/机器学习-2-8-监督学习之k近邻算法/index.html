@@ -1,237 +1,0 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  
-  
-  <title>机器学习-2.8-监督学习之k近邻算法 | Hexo</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-  <meta name="description" content="K近邻算法K近邻算法是一种常用的监督学习算法。其工作机制非常简单: 给定测试样本，基于某种距离度量找到与测试样本最近的k个训练样本，然后可以根据k个样本决定分类。譬如可以选择k个样本中最多的测试样本进行分类。 下面我们使用k近邻算法识别手写数字。手写数字为一个32*32维的向量，我们可以把它看成一个1024维的向量。然后任意两个样本的距离完全可以通过计算1024维上的两个点之间的距离获得，然">
-<meta property="og:type" content="article">
-<meta property="og:title" content="机器学习-2.8-监督学习之k近邻算法">
-<meta property="og:url" content="http://example.com/2017/10/15/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-2-8-%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0%E4%B9%8Bk%E8%BF%91%E9%82%BB%E7%AE%97%E6%B3%95/index.html">
-<meta property="og:site_name" content="Hexo">
-<meta property="og:description" content="K近邻算法K近邻算法是一种常用的监督学习算法。其工作机制非常简单: 给定测试样本，基于某种距离度量找到与测试样本最近的k个训练样本，然后可以根据k个样本决定分类。譬如可以选择k个样本中最多的测试样本进行分类。 下面我们使用k近邻算法识别手写数字。手写数字为一个32*32维的向量，我们可以把它看成一个1024维的向量。然后任意两个样本的距离完全可以通过计算1024维上的两个点之间的距离获得，然">
-<meta property="og:locale" content="en_US">
-<meta property="article:published_time" content="2017-10-15T12:29:06.000Z">
-<meta property="article:modified_time" content="2025-02-07T08:06:18.199Z">
-<meta property="article:author" content="zhengchenyu">
-<meta name="twitter:card" content="summary">
-  
-    <link rel="alternate" href="/atom.xml" title="Hexo" type="application/atom+xml">
-  
-  
-    <link rel="shortcut icon" href="/favicon.png">
-  
-  
-  
-<link rel="stylesheet" href="/css/style.css">
-
-  
-    
-<link rel="stylesheet" href="/fancybox/jquery.fancybox.min.css">
-
-  
-  
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fork-awesome@1.2.0/css/fork-awesome.min.css">
-
-<meta name="generator" content="Hexo 8.1.1"></head>
-
-<body>
-  <div id="container">
-    <div id="wrap">
-      <header id="header">
-  <div id="banner"></div>
-  <div id="header-outer" class="outer">
-    <div id="header-title" class="inner">
-      <h1 id="logo-wrap">
-        <a href="/" id="logo">Hexo</a>
-      </h1>
-      
-    </div>
-    <div id="header-inner" class="inner">
-      <nav id="main-nav">
-        <a id="main-nav-toggle" class="nav-icon"><span class="fa fa-bars"></span></a>
-        
-          <a class="main-nav-link" href="/">Home</a>
-        
-          <a class="main-nav-link" href="/archives">Archives</a>
-        
-      </nav>
-      <nav id="sub-nav">
-        
-        
-          <a class="nav-icon" href="/atom.xml" title="RSS Feed"><span class="fa fa-rss"></span></a>
-        
-        <a class="nav-icon nav-search-btn" title="Search"><span class="fa fa-search"></span></a>
-      </nav>
-      <div id="search-form-wrap">
-        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit">&#xF002;</button><input type="hidden" name="sitesearch" value="http://example.com"></form>
-      </div>
-    </div>
-  </div>
-</header>
-
-      <div class="outer">
-        <section id="main"><article id="post-机器学习-2-8-监督学习之k近邻算法" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
-  <div class="article-meta">
-    <a href="/2017/10/15/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-2-8-%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0%E4%B9%8Bk%E8%BF%91%E9%82%BB%E7%AE%97%E6%B3%95/" class="article-date">
-  <time class="dt-published" datetime="2017-10-15T12:29:06.000Z" itemprop="datePublished">2017-10-15</time>
-</a>
-    
-  </div>
-  <div class="article-inner">
-    
-    
-      <header class="article-header">
-        
-  
-    <h1 class="p-name article-title" itemprop="headline name">
-      机器学习-2.8-监督学习之k近邻算法
-    </h1>
-  
-
-      </header>
-    
-    <div class="e-content article-entry" itemprop="articleBody">
-      
-        <script type="text/javascript" src="/Users/zcy/Desktop/study/git/MathJax-master/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-
-
-<h1 id="K近邻算法"><a href="#K近邻算法" class="headerlink" title="K近邻算法"></a>K近邻算法</h1><p>K近邻算法是一种常用的监督学习算法。其工作机制非常简单: 给定测试样本，基于某种距离度量找到与测试样本最近的k个训练样本，然后可以根据k个样本决定分类。譬如可以选择k个样本中最多的测试样本进行分类。</p>
-<p>下面我们使用k近邻算法识别手写数字。手写数字为一个32*32维的向量，我们可以把它看成一个1024维的向量。然后任意两个样本的距离完全可以通过计算1024维上的两个点之间的距离获得，然后我们可以找到与测试样本距离最近的的10个样本，其中最多的分类我们认为他就是测试样本的分类。具体代码如下：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> numpy <span class="keyword">as</span> np<span class="keyword">import</span> os<span class="keyword">from</span> numpy <span class="keyword">import</span> linalg<span class="keyword">global</span> g_train<span class="keyword">global</span> g_label<span class="keyword">def</span> <span class="title function_">makeTrain</span>(<span class="params"><span class="built_in">dir</span></span>):  dirs=os.listdir(<span class="built_in">dir</span>)  files = <span class="built_in">filter</span>(<span class="keyword">lambda</span> item:<span class="keyword">not</span> os.path.isdir(item), dirs)  mat = []  label = []  <span class="keyword">for</span> file <span class="keyword">in</span> files:    arr = []    f = <span class="built_in">open</span>(<span class="built_in">dir</span>+<span class="string">&quot;/&quot;</span>+file)    <span class="keyword">while</span> <span class="literal">True</span>:      line = f.readline()      <span class="keyword">if</span> <span class="keyword">not</span> line:        <span class="keyword">break</span>      <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(<span class="built_in">len</span>(line)-<span class="number">1</span>):        <span class="comment"># line[len(line)]=&#x27;\n&#x27;</span>        arr.append(<span class="built_in">int</span>(line[i]))    mat.append(arr)    label.append(<span class="built_in">int</span>(file.split(<span class="string">&quot;_&quot;</span>)[<span class="number">0</span>]))  <span class="keyword">return</span> (np.array(mat),np.array(label))<span class="keyword">def</span> <span class="title function_">testClassify</span>(<span class="params"><span class="built_in">dir</span></span>):  dirs=os.listdir(<span class="built_in">dir</span>)  files = <span class="built_in">filter</span>(<span class="keyword">lambda</span> item:<span class="keyword">not</span> os.path.isdir(item), dirs)  mat = []  right=<span class="number">0</span>  wrong=<span class="number">0</span>  <span class="keyword">for</span> file <span class="keyword">in</span> files:    arr = []    f = <span class="built_in">open</span>(<span class="built_in">dir</span>+<span class="string">&quot;/&quot;</span>+file)    <span class="keyword">while</span> <span class="literal">True</span>:      line = f.readline()      <span class="keyword">if</span> <span class="keyword">not</span> line:        <span class="keyword">break</span>      <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(<span class="built_in">len</span>(line)-<span class="number">1</span>):        <span class="comment"># line[len(line)]=&#x27;\n&#x27;</span>        arr.append(<span class="built_in">int</span>(line[i]))    mat.append(arr)    testLabel = file.split(<span class="string">&quot;_&quot;</span>)[<span class="number">0</span>]    label=classify(np.array(arr),<span class="number">10</span>)    <span class="keyword">if</span> testLabel == label:      right=right+<span class="number">1</span>    <span class="keyword">else</span>:      wrong=wrong+<span class="number">1</span>  <span class="built_in">print</span>(<span class="string">&quot;right=&quot;</span>,right,<span class="string">&quot;, wrong=&quot;</span>,wrong)<span class="keyword">def</span> <span class="title function_">classify</span>(<span class="params">vec,k</span>):  <span class="comment"># 计算各个训练数据与测试数据的距离</span>  m = <span class="built_in">len</span>(g_label)  dis = []  <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(m):    dis.append([linalg.norm(vec-g_train[i]),g_label[i]])  dis = <span class="built_in">sorted</span>(dis, key=<span class="keyword">lambda</span> v:v[<span class="number">0</span>])  <span class="comment"># 计算相似度最高的k个值，这里写入map做累积</span>  dic = &#123;&#125;  <span class="keyword">for</span> j <span class="keyword">in</span> <span class="built_in">range</span>(k):    <span class="keyword">if</span> <span class="keyword">not</span> <span class="built_in">str</span>(dis[j][<span class="number">1</span>]) <span class="keyword">in</span> dic:      dic[<span class="built_in">str</span>(dis[j][<span class="number">1</span>])]=<span class="number">1</span>    <span class="keyword">else</span>:      dic[<span class="built_in">str</span>(dis[j][<span class="number">1</span>])]=dic[<span class="built_in">str</span>(dis[j][<span class="number">1</span>])]+<span class="number">1</span>  <span class="keyword">return</span> <span class="built_in">max</span>(dic.items(), key=<span class="keyword">lambda</span> x: x[<span class="number">1</span>])[<span class="number">0</span>]<span class="keyword">if</span> __name__ == <span class="string">&quot;__main__&quot;</span>:  <span class="comment"># 1 formate trainning date</span>  (g_train,g_label) =makeTrain(<span class="string">&quot;/Users/zcy/Desktop/study/git/mlearning/res/trainingDigits1&quot;</span>)  <span class="comment"># 2 test</span>  testClassify(<span class="string">&quot;/Users/zcy/Desktop/study/git/mlearning/res/testDigits1&quot;</span>)</span><br><span class="line"></span><br></pre></td></tr></table></figure>
-
-<p>计算946个测试样本集，有926个为正确计算，20个为错误计算，识别为97.89%</p>
-
-      
-    </div>
-    <footer class="article-footer">
-      <a data-url="http://example.com/2017/10/15/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-2-8-%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0%E4%B9%8Bk%E8%BF%91%E9%82%BB%E7%AE%97%E6%B3%95/" data-id="cuidZ3bkSbAoUh5wTvcVk3CWM" data-title="机器学习-2.8-监督学习之k近邻算法" class="article-share-link"><span class="fa fa-share">Share</span></a>
-      
-      
-      
-    </footer>
-  </div>
-  
-    
-<nav id="article-nav">
-  
-    <a href="/2017/10/22/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-3-2-%E9%9D%9E%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0%E4%B9%8B%E4%B8%BB%E6%88%90%E5%88%86%E5%88%86%E6%9E%90/" id="article-nav-newer" class="article-nav-link-wrap">
-      <strong class="article-nav-caption">Newer</strong>
-      <div class="article-nav-title">
-        
-          机器学习-3.2-非监督学习之主成分分析.md
-        
-      </div>
-    </a>
-  
-  
-    <a href="/2017/09/24/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-3-1-%E9%9D%9E%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0%E4%B9%8B%E8%81%9A%E7%B1%BB/" id="article-nav-older" class="article-nav-link-wrap">
-      <strong class="article-nav-caption">Older</strong>
-      <div class="article-nav-title">机器学习-3.1-非监督学习之聚类.md</div>
-    </a>
-  
-</nav>
-
-  
-</article>
-
-
-</section>
-        
-          <aside id="sidebar">
-  
-    
-
-  
-    
-
-  
-    
-  
-    
-  <div class="widget-wrap">
-    <h3 class="widget-title">Archives</h3>
-    <div class="widget">
-      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2025/02/">February 2025</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2023/12/">December 2023</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/10/">October 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">September 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/08/">August 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/07/">July 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/06/">June 2017</a></li></ul>
-    </div>
-  </div>
-
-
-  
-    
-  <div class="widget-wrap">
-    <h3 class="widget-title">Recent Posts</h3>
-    <div class="widget">
-      <ul>
-        
-          <li>
-            <a href="/2025/02/07/ErasuceCode%E7%AE%97%E6%B3%95%E5%AE%9E%E7%8E%B0/">(no title)</a>
-          </li>
-        
-          <li>
-            <a href="/2023/12/25/RSS-%E8%BF%9C%E7%A8%8BMerge%E7%9A%84%E8%AE%BE%E8%AE%A1/">RSS-远程Merge的设计</a>
-          </li>
-        
-          <li>
-            <a href="/2023/12/25/RSS-%E8%BF%9C%E7%A8%8BMerge%E7%9A%84%E8%AE%BE%E8%AE%A1EN/">RSS-Remote Merge Design</a>
-          </li>
-        
-          <li>
-            <a href="/2017/10/22/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-3-2-%E9%9D%9E%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0%E4%B9%8B%E4%B8%BB%E6%88%90%E5%88%86%E5%88%86%E6%9E%90/">机器学习-3.2-非监督学习之主成分分析.md</a>
-          </li>
-        
-          <li>
-            <a href="/2017/10/15/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-2-8-%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0%E4%B9%8Bk%E8%BF%91%E9%82%BB%E7%AE%97%E6%B3%95/">机器学习-2.8-监督学习之k近邻算法</a>
-          </li>
-        
-      </ul>
-    </div>
-  </div>
-
-  
-</aside>
-        
-      </div>
-      <footer id="footer">
-  
-  <div class="outer">
-    <div id="footer-info" class="inner">
-      
-      &copy; 2025 zhengchenyu<br>
-      Powered by <a href="https://hexo.io/" target="_blank">Hexo</a>
-    </div>
-  </div>
-</footer>
-
-    </div>
-    <nav id="mobile-nav">
-  
-    <a href="/" class="mobile-nav-link">Home</a>
-  
-    <a href="/archives" class="mobile-nav-link">Archives</a>
-  
-</nav>
-    
-
-
-<script src="/js/jquery-3.6.4.min.js"></script>
-
-
-
-  
-<script src="/fancybox/jquery.fancybox.min.js"></script>
-
-
-
-
-<script src="/js/script.js"></script>
-
-
-
-
-
-  </div>
-</body>
-</html>
