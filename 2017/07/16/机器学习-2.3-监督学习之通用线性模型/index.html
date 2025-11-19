@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  
+  
+  <title>机器学习-2.3-监督学习之通用线性模型 | Hexo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="description" content="Generalized Linear Models回归分析中我们使用了高斯分布,分类问题服从伯努利分布。这两种方法都是第一个更通用的分布的特例，我们称其Generalized Linear Models (GLMs) 1 指数族分布我们定义如下形式为指数族分布： $$p(y;\eta ) &#x3D; b(y)exp({\eta ^T}T(y) - a(\eta ))$$   其中,\(\eta \)">
+<meta property="og:type" content="article">
+<meta property="og:title" content="机器学习-2.3-监督学习之通用线性模型">
+<meta property="og:url" content="http://example.com/2017/07/16/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-2.3-%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0%E4%B9%8B%E9%80%9A%E7%94%A8%E7%BA%BF%E6%80%A7%E6%A8%A1%E5%9E%8B/index.html">
+<meta property="og:site_name" content="Hexo">
+<meta property="og:description" content="Generalized Linear Models回归分析中我们使用了高斯分布,分类问题服从伯努利分布。这两种方法都是第一个更通用的分布的特例，我们称其Generalized Linear Models (GLMs) 1 指数族分布我们定义如下形式为指数族分布： $$p(y;\eta ) &#x3D; b(y)exp({\eta ^T}T(y) - a(\eta ))$$   其中,\(\eta \)">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2017-07-16T06:33:58.000Z">
+<meta property="article:modified_time" content="2025-02-07T08:06:18.199Z">
+<meta property="article:author" content="zhengchenyu">
+<meta name="twitter:card" content="summary">
+  
+    <link rel="alternate" href="/atom.xml" title="Hexo" type="application/atom+xml">
+  
+  
+    <link rel="shortcut icon" href="/favicon.png">
+  
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+  
+    
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.min.css">
+
+  
+  
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fork-awesome@1.2.0/css/fork-awesome.min.css">
+
+<meta name="generator" content="Hexo 8.1.1"></head>
+
+<body>
+  <div id="container">
+    <div id="wrap">
+      <header id="header">
+  <div id="banner"></div>
+  <div id="header-outer" class="outer">
+    <div id="header-title" class="inner">
+      <h1 id="logo-wrap">
+        <a href="/" id="logo">Hexo</a>
+      </h1>
+      
+    </div>
+    <div id="header-inner" class="inner">
+      <nav id="main-nav">
+        <a id="main-nav-toggle" class="nav-icon"><span class="fa fa-bars"></span></a>
+        
+          <a class="main-nav-link" href="/">Home</a>
+        
+          <a class="main-nav-link" href="/archives">Archives</a>
+        
+      </nav>
+      <nav id="sub-nav">
+        
+        
+          <a class="nav-icon" href="/atom.xml" title="RSS Feed"><span class="fa fa-rss"></span></a>
+        
+        <a class="nav-icon nav-search-btn" title="Search"><span class="fa fa-search"></span></a>
+      </nav>
+      <div id="search-form-wrap">
+        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit">&#xF002;</button><input type="hidden" name="sitesearch" value="http://example.com"></form>
+      </div>
+    </div>
+  </div>
+</header>
+
+      <div class="outer">
+        <section id="main"><article id="post-机器学习-2.3-监督学习之通用线性模型" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
+  <div class="article-meta">
+    <a href="/2017/07/16/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-2.3-%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0%E4%B9%8B%E9%80%9A%E7%94%A8%E7%BA%BF%E6%80%A7%E6%A8%A1%E5%9E%8B/" class="article-date">
+  <time class="dt-published" datetime="2017-07-16T06:33:58.000Z" itemprop="datePublished">2017-07-16</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="p-name article-title" itemprop="headline name">
+      机器学习-2.3-监督学习之通用线性模型
+    </h1>
+  
+
+      </header>
+    
+    <div class="e-content article-entry" itemprop="articleBody">
+      
+        <script type="text/javascript" src="/Users/zcy/Desktop/study/git/MathJax-master/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+<h1 id="Generalized-Linear-Models"><a href="#Generalized-Linear-Models" class="headerlink" title="Generalized Linear Models"></a>Generalized Linear Models</h1><p>回归分析中我们使用了高斯分布,分类问题服从伯努利分布。这两种方法都是第一个更通用的分布的特例，我们称其Generalized Linear Models (GLMs)</p>
+<h2 id="1-指数族分布"><a href="#1-指数族分布" class="headerlink" title="1 指数族分布"></a>1 指数族分布</h2><p>我们定义如下形式为指数族分布：</p>
+$$p(y;\eta ) = b(y)exp({\eta ^T}T(y) - a(\eta ))$$
+
+
+<p>其中,\(\eta \)是自然参数(natural parameter )，\(T(y) \)叫做充分统计量(sufficient statistic),一般\(T(y)&#x3D;y\)。\(a(\eta) \)是log partition function 。\({e^{ - a\left( \eta  \right)}}\)在归整化很重要，这个参数确保\(p(y;\eta )\)归整为1。</p>
+<h2 id="2-指数族分布的特例"><a href="#2-指数族分布的特例" class="headerlink" title="2 指数族分布的特例"></a>2 指数族分布的特例</h2><p>其中伯努利分布和高斯分布都是指数族分布的一个特例。</p>
+<h3 id="2-1-伯努利分布的指数族表达"><a href="#2-1-伯努利分布的指数族表达" class="headerlink" title="2.1 伯努利分布的指数族表达"></a>2.1 伯努利分布的指数族表达</h3><p>伯努利分布的指数表示:</p>
+$$p(y,\varphi ) = {\varphi ^y}{(1 - \varphi )^{1 - y}} = \exp (y\log \frac{\varphi }{1 - \varphi } + \log (1 - \varphi ))$$
+
+
+<p>对照指数函数族的表达式，有\(b(y) &#x3D; 1\),\(T(y) &#x3D; y\),\(\eta  &#x3D; \log \frac{\varphi }{1 - \varphi}\)等价于\(\varphi&#x3D;\frac{e^\eta}{e^\eta + 1}\),\(a(y) &#x3D; \log \frac{1}{1 - \varphi } &#x3D; \log ({e^\eta } + 1)\)</p>
+<h3 id="2-2-高斯分布的指数族表达"><a href="#2-2-高斯分布的指数族表达" class="headerlink" title="2.2 高斯分布的指数族表达"></a>2.2 高斯分布的指数族表达</h3><p>高斯分布的指数表示:</p>
+$$p(y;\mu ) = \frac{1}{{\sqrt {2\pi } }}\exp ( - \frac{1}{2}{(y - \mu )^2}) = \frac{1}{{\sqrt {2\pi } }}\exp ( - \frac{1}{2}{y^2})\exp (\mu y - \frac{1}{2}{\mu ^2})$$
+
+
+<p>对照指数函数族的表达式，有\(b(y) &#x3D; \frac{1}{\sqrt {2\pi }}\exp ( - \frac{1}{2}{y^2})\),\( \eta &#x3D; \mu \),\(T(y) &#x3D; y\),\(a(\eta ) &#x3D; \frac{1}{2}{u^2} &#x3D; \frac{1}{2}{\eta ^2}\)。</p>
+<h2 id="3-指数函数组的三个假设"><a href="#3-指数函数组的三个假设" class="headerlink" title="3 指数函数组的三个假设"></a>3 指数函数组的三个假设</h2><p>三个假设分别为:</p>
+<ul>
+<li>\(y|x;\theta\)服从指数分布</li>
+<li>给定\(x\)的情况下，我们的目标是预测\(T(y)\)。在大多数的例子中，\(T(y)&#x3D;y\),因此就意味着我们通过学习得到函数h, 使得\(h(x)&#x3D;E(y|x)\), 意思就是给定x，得到函数h使得其与训练样本的数学期望相等。</li>
+<li>自然参数\(\theta\)与输入\(x\)是线性关系。</li>
+</ul>
+<p>对照上面的过程，我们可知伯努利分布和高斯分布都符合这三个假设</p>
+<h2 id="4-GLMs公式推导"><a href="#4-GLMs公式推导" class="headerlink" title="4 GLMs公式推导"></a>4 GLMs公式推导</h2><p>还是之前的问题，已知有\(m\)个样本，通过学习模拟正确的\(h(x)\),使得其能够有效的推测\(y\)。(这里我们假定了\(T(y)&#x3D;y\))</p>
+<p>得到最大释然函数:</p>
+$$l(\eta ) = \sum\limits_{i = 1}^m {b({y^i}){\text{ }}exp({\eta ^T}T({y^i}) - a(\eta ))} $$
+
+
+<p>然后为了求其最大值，我们对其取自然对数后求倒数。</p>
+$$\frac{{\partial \ln (l(\eta ))}}{{\partial \eta }} = \sum\limits _{i = 1}^m {\frac{{\partial (\ln b({y^i}) + {\eta ^T}T({y^i}) - a(\eta ))}}{{\partial \eta }}}  = \sum\limits _{i = 1}^m {(T({y^i})}  - \frac{{\partial a(\eta )}}{{\partial \eta }})$$
+
+
+<p>在我们之前指数族分布的定义3中，\(\eta\)是各个维度\(x\)的线性表达。有\(\eta  &#x3D; {\theta ^T}x\)。所以，我们对每一个维度求偏导数，有：</p>
+$$\frac{{\partial \ln (l(\eta ))}}{{\partial {\theta _j}}} = \frac{{\partial \ln (l(\eta ))}}{{\partial \eta }}\frac{{\partial \eta }}{{\partial {\theta _j}}} = \sum\limits _{i = 1}^m {(T({y^i})}  - \frac{{\partial a(\eta )}}{{\partial \eta }})x _j^i$$
+
+<p>如果指数分布为伯努利分布，我们将式子带入其中，能够轻易的关于\(\theta _j\)的偏导数，且与之前推导的结果一致，具体过程不详细说了。高斯分布同理。</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://example.com/2017/07/16/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-2.3-%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0%E4%B9%8B%E9%80%9A%E7%94%A8%E7%BA%BF%E6%80%A7%E6%A8%A1%E5%9E%8B/" data-id="cuidQ0z48hrNUoWFbso6NOEwt" data-title="机器学习-2.3-监督学习之通用线性模型" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      
+      
+      
+    </footer>
+  </div>
+  
+    
+<nav id="article-nav">
+  
+    <a href="/2017/07/24/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-2-4-%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0%E4%B9%8Bsoftmax/" id="article-nav-newer" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Newer</strong>
+      <div class="article-nav-title">
+        
+          机器学习-2.4-监督学习之softmax
+        
+      </div>
+    </a>
+  
+  
+    <a href="/2017/06/13/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-2.2-%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0%E4%B9%8B%E5%88%86%E7%B1%BB/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">机器学习 2.2 监督学习之逻辑回归</div>
+    </a>
+  
+</nav>
+
+  
+</article>
+
+
+</section>
+        
+          <aside id="sidebar">
+  
+    
+
+  
+    
+
+  
+    
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Archives</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2025/02/">February 2025</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2023/12/">December 2023</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/10/">October 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">September 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/08/">August 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/07/">July 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/06/">June 2017</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Recent Posts</h3>
+    <div class="widget">
+      <ul>
+        
+          <li>
+            <a href="/2025/02/07/ErasuceCode%E7%AE%97%E6%B3%95%E5%AE%9E%E7%8E%B0/">(no title)</a>
+          </li>
+        
+          <li>
+            <a href="/2023/12/25/RSS-%E8%BF%9C%E7%A8%8BMerge%E7%9A%84%E8%AE%BE%E8%AE%A1/">RSS-远程Merge的设计</a>
+          </li>
+        
+          <li>
+            <a href="/2023/12/25/RSS-%E8%BF%9C%E7%A8%8BMerge%E7%9A%84%E8%AE%BE%E8%AE%A1EN/">RSS-Remote Merge Design</a>
+          </li>
+        
+          <li>
+            <a href="/2017/10/22/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-3-2-%E9%9D%9E%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0%E4%B9%8B%E4%B8%BB%E6%88%90%E5%88%86%E5%88%86%E6%9E%90/">机器学习-3.2-非监督学习之主成分分析.md</a>
+          </li>
+        
+          <li>
+            <a href="/2017/10/15/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-2-8-%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0%E4%B9%8Bk%E8%BF%91%E9%82%BB%E7%AE%97%E6%B3%95/">机器学习-2.8-监督学习之k近邻算法</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+  
+</aside>
+        
+      </div>
+      <footer id="footer">
+  
+  <div class="outer">
+    <div id="footer-info" class="inner">
+      
+      &copy; 2025 zhengchenyu<br>
+      Powered by <a href="https://hexo.io/" target="_blank">Hexo</a>
+    </div>
+  </div>
+</footer>
+
+    </div>
+    <nav id="mobile-nav">
+  
+    <a href="/" class="mobile-nav-link">Home</a>
+  
+    <a href="/archives" class="mobile-nav-link">Archives</a>
+  
+</nav>
+    
+
+
+<script src="/js/jquery-3.6.4.min.js"></script>
+
+
+
+  
+<script src="/fancybox/jquery.fancybox.min.js"></script>
+
+
+
+
+<script src="/js/script.js"></script>
+
+
+
+
+
+  </div>
+</body>
+</html>

@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  
+  
+  <title>机器学习-3.1-非监督学习之聚类.md | Hexo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="description" content="聚类问题本节主要介绍非监督学习的聚类算法。 1 常见的聚类算法聚类问题中，我们给定训练集合\(\{ {x^{(1)}},{x^{(2)}},…,{x^{(m)}}\}\)，目的是将训练样本聚合几个类中。由于问题过程中，\(y\)并没有指定，所以这是一个非监督问题。 1.1 k-means下面介绍k-means算法。算法的主要流程如下：  (1) 随机初始化重心\(\{ {x^{(1)}},{x">
+<meta property="og:type" content="article">
+<meta property="og:title" content="机器学习-3.1-非监督学习之聚类.md">
+<meta property="og:url" content="http://example.com/2017/09/24/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-3-1-%E9%9D%9E%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0%E4%B9%8B%E8%81%9A%E7%B1%BB/index.html">
+<meta property="og:site_name" content="Hexo">
+<meta property="og:description" content="聚类问题本节主要介绍非监督学习的聚类算法。 1 常见的聚类算法聚类问题中，我们给定训练集合\(\{ {x^{(1)}},{x^{(2)}},…,{x^{(m)}}\}\)，目的是将训练样本聚合几个类中。由于问题过程中，\(y\)并没有指定，所以这是一个非监督问题。 1.1 k-means下面介绍k-means算法。算法的主要流程如下：  (1) 随机初始化重心\(\{ {x^{(1)}},{x">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="http://example.com/images/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/%E9%9D%9E%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0-kmeans%E5%AE%9E%E9%AA%8C%E5%8E%9F%E5%A7%8B%E6%95%B0%E6%8D%AE.png">
+<meta property="og:image" content="http://example.com/images/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/%E9%9D%9E%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0-kmeans%E5%AE%9E%E9%AA%8C%E7%BB%93%E6%9E%9C1.png">
+<meta property="og:image" content="http://example.com/images/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/%E9%9D%9E%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0-kmeans%E5%AE%9E%E9%AA%8C%E7%BB%93%E6%9E%9C2.png">
+<meta property="og:image" content="http://example.com/images/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/%E9%9D%9E%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0-%E9%AB%98%E6%96%AF%E6%B7%B7%E5%90%88%E8%81%9A%E7%B1%BB%E5%8E%9F%E5%A7%8B%E6%95%B0%E6%8D%AE.png">
+<meta property="og:image" content="http://example.com/images/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/%E9%9D%9E%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0-%E9%AB%98%E6%96%AF%E6%B7%B7%E5%90%88%E8%81%9A%E7%B1%BB%E5%AE%9E%E9%AA%8C%E7%BB%93%E6%9E%9C.png">
+<meta property="article:published_time" content="2017-09-24T13:36:20.000Z">
+<meta property="article:modified_time" content="2025-02-07T08:06:18.199Z">
+<meta property="article:author" content="zhengchenyu">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/images/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/%E9%9D%9E%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0-kmeans%E5%AE%9E%E9%AA%8C%E5%8E%9F%E5%A7%8B%E6%95%B0%E6%8D%AE.png">
+  
+    <link rel="alternate" href="/atom.xml" title="Hexo" type="application/atom+xml">
+  
+  
+    <link rel="shortcut icon" href="/favicon.png">
+  
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+  
+    
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.min.css">
+
+  
+  
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fork-awesome@1.2.0/css/fork-awesome.min.css">
+
+<meta name="generator" content="Hexo 8.1.1"></head>
+
+<body>
+  <div id="container">
+    <div id="wrap">
+      <header id="header">
+  <div id="banner"></div>
+  <div id="header-outer" class="outer">
+    <div id="header-title" class="inner">
+      <h1 id="logo-wrap">
+        <a href="/" id="logo">Hexo</a>
+      </h1>
+      
+    </div>
+    <div id="header-inner" class="inner">
+      <nav id="main-nav">
+        <a id="main-nav-toggle" class="nav-icon"><span class="fa fa-bars"></span></a>
+        
+          <a class="main-nav-link" href="/">Home</a>
+        
+          <a class="main-nav-link" href="/archives">Archives</a>
+        
+      </nav>
+      <nav id="sub-nav">
+        
+        
+          <a class="nav-icon" href="/atom.xml" title="RSS Feed"><span class="fa fa-rss"></span></a>
+        
+        <a class="nav-icon nav-search-btn" title="Search"><span class="fa fa-search"></span></a>
+      </nav>
+      <div id="search-form-wrap">
+        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit">&#xF002;</button><input type="hidden" name="sitesearch" value="http://example.com"></form>
+      </div>
+    </div>
+  </div>
+</header>
+
+      <div class="outer">
+        <section id="main"><article id="post-机器学习-3-1-非监督学习之聚类" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
+  <div class="article-meta">
+    <a href="/2017/09/24/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-3-1-%E9%9D%9E%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0%E4%B9%8B%E8%81%9A%E7%B1%BB/" class="article-date">
+  <time class="dt-published" datetime="2017-09-24T13:36:20.000Z" itemprop="datePublished">2017-09-24</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="p-name article-title" itemprop="headline name">
+      机器学习-3.1-非监督学习之聚类.md
+    </h1>
+  
+
+      </header>
+    
+    <div class="e-content article-entry" itemprop="articleBody">
+      
+        <script type="text/javascript" src="/Users/zcy/Desktop/study/git/MathJax-master/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+<h1 id="聚类问题"><a href="#聚类问题" class="headerlink" title="聚类问题"></a>聚类问题</h1><p>本节主要介绍非监督学习的聚类算法。</p>
+<h2 id="1-常见的聚类算法"><a href="#1-常见的聚类算法" class="headerlink" title="1 常见的聚类算法"></a>1 常见的聚类算法</h2><p>聚类问题中，我们给定训练集合\(\{ {x^{(1)}},{x^{(2)}},…,{x^{(m)}}\}\)，目的是将训练样本聚合几个类中。由于问题过程中，\(y\)并没有指定，所以这是一个非监督问题。</p>
+<h3 id="1-1-k-means"><a href="#1-1-k-means" class="headerlink" title="1.1 k-means"></a>1.1 k-means</h3><p>下面介绍k-means算法。算法的主要流程如下：</p>
+<ul>
+<li>(1) 随机初始化重心\(\{ {x^{(1)}},{x^{(2)}},…,{x^{(m)}}\}\)(假设有k个分类)</li>
+<li>(2) 根据当前的\(\{ {x^{(1)}},{x^{(2)}},…,{x^{(m)}}\}\)，计算距离每个样本距离最近的中心，即为所属类。</li>
+<li>(3) 然后根据2中得到新的所属类关系，更新一组新的重心值。</li>
+<li>(4) 重复2,3直到某个截止条件。</li>
+</ul>
+<p>下面我们随机制造以三个点为高斯分布的一组数据，试图从该组数据完成聚类操作，具体代码如下：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> numpy <span class="keyword">as</span> np</span><br><span class="line"><span class="keyword">from</span> matplotlib <span class="keyword">import</span> pyplot <span class="keyword">as</span> plt</span><br><span class="line"><span class="keyword">import</span> sys</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">makeData</span>():</span><br><span class="line">  <span class="comment"># 0 make data</span></span><br><span class="line">  mean_1 = [<span class="number">1</span>, <span class="number">1</span>]</span><br><span class="line">  mean_2 = [<span class="number">2</span>, <span class="number">2</span>]</span><br><span class="line">  mean_3 = [<span class="number">1</span>, <span class="number">2</span>]</span><br><span class="line">  cov = [[<span class="number">0.05</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">0.05</span>]]</span><br><span class="line">  arr1 = np.random.multivariate_normal(mean_1, cov, <span class="number">100</span>)</span><br><span class="line">  arr2 = np.random.multivariate_normal(mean_2, cov, <span class="number">50</span>)</span><br><span class="line">  arr3 = np.random.multivariate_normal(mean_3, cov, <span class="number">50</span>)</span><br><span class="line">  figure, ax = plt.subplots()</span><br><span class="line">  ax.set_xlim(left=-<span class="number">1</span>, right=<span class="number">4</span>)</span><br><span class="line">  ax.set_ylim(bottom=-<span class="number">1</span>, top=<span class="number">4</span>)</span><br><span class="line">  <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(<span class="built_in">len</span>(arr1)):</span><br><span class="line">    plt.plot(arr1[i][<span class="number">0</span>], arr1[i][<span class="number">1</span>], <span class="string">&#x27;b--&#x27;</span>, marker=<span class="string">&#x27;+&#x27;</span>, color=<span class="string">&#x27;r&#x27;</span>)</span><br><span class="line">  <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(<span class="built_in">len</span>(arr2)):</span><br><span class="line">    plt.plot(arr2[i][<span class="number">0</span>], arr2[i][<span class="number">1</span>], <span class="string">&#x27;b--&#x27;</span>, marker=<span class="string">&#x27;o&#x27;</span>, color=<span class="string">&#x27;g&#x27;</span>)</span><br><span class="line">  <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(<span class="built_in">len</span>(arr3)):</span><br><span class="line">    plt.plot(arr3[i][<span class="number">0</span>], arr3[i][<span class="number">1</span>], <span class="string">&#x27;b--&#x27;</span>, marker=<span class="string">&#x27;*&#x27;</span>, color=<span class="string">&#x27;b&#x27;</span>)</span><br><span class="line">  plt.xlabel(<span class="string">&quot;x1&quot;</span>)</span><br><span class="line">  plt.ylabel(<span class="string">&quot;x2&quot;</span>)</span><br><span class="line">  <span class="keyword">return</span> np.vstack((arr1,arr2,arr3))</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">updateSingleLabel</span>(<span class="params">x,center</span>):</span><br><span class="line">  n = <span class="built_in">len</span>(center)</span><br><span class="line">  <span class="built_in">min</span> = sys.maxsize</span><br><span class="line">  minIndex = -<span class="number">1</span></span><br><span class="line">  <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(n):</span><br><span class="line">    tmp = np.linalg.norm(x - center[i])</span><br><span class="line">    <span class="keyword">if</span> tmp &lt; <span class="built_in">min</span>:</span><br><span class="line">      minIndex=i</span><br><span class="line">      <span class="built_in">min</span> = tmp</span><br><span class="line">  <span class="keyword">return</span> minIndex</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">updateLable</span>(<span class="params">data,label,center</span>):</span><br><span class="line">  numChanged = <span class="number">0</span>;</span><br><span class="line">  n=<span class="built_in">len</span>(data)</span><br><span class="line">  label_new = np.zeros(n);</span><br><span class="line">  <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(n):</span><br><span class="line">    label_new[i] = updateSingleLabel(data[i], center)</span><br><span class="line">    <span class="keyword">if</span> label_new[i] != label[i]:</span><br><span class="line">      numChanged = numChanged + <span class="number">1</span></span><br><span class="line">  <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(n):</span><br><span class="line">    label[i] = label_new[i]</span><br><span class="line">  <span class="keyword">return</span> numChanged;</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">updateCenter</span>(<span class="params">data,label,center</span>):</span><br><span class="line">  newCenter=np.array([[<span class="number">0.0</span>,<span class="number">0.0</span>],[<span class="number">0.0</span>,<span class="number">0.0</span>],[<span class="number">0.0</span>,<span class="number">0.0</span>]])</span><br><span class="line">  newCenterSum=np.array([<span class="number">0</span>,<span class="number">0</span>,<span class="number">0</span>])</span><br><span class="line">  <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(<span class="built_in">len</span>(data)):</span><br><span class="line">    <span class="keyword">if</span> label[i]==<span class="number">0</span>:</span><br><span class="line">      newCenter[<span class="number">0</span>] = newCenter[<span class="number">0</span>] + data[i]</span><br><span class="line">      newCenterSum[<span class="number">0</span>] = newCenterSum[<span class="number">0</span>] + <span class="number">1</span></span><br><span class="line">    <span class="keyword">elif</span> label[i] == <span class="number">1</span>:</span><br><span class="line">      newCenter[<span class="number">1</span>] = newCenter[<span class="number">1</span>] + data[i]</span><br><span class="line">      newCenterSum[<span class="number">1</span>] = newCenterSum[<span class="number">1</span>] + <span class="number">1</span></span><br><span class="line">    <span class="keyword">elif</span> label[i] == <span class="number">2</span>:</span><br><span class="line">      newCenter[<span class="number">2</span>] = newCenter[<span class="number">2</span>] + data[i]</span><br><span class="line">      newCenterSum[<span class="number">2</span>] = newCenterSum[<span class="number">2</span>] + <span class="number">1</span></span><br><span class="line">  <span class="keyword">if</span> newCenterSum[<span class="number">0</span>] &gt; <span class="number">0</span> :</span><br><span class="line">    center[<span class="number">0</span>] = newCenter[<span class="number">0</span>]/newCenterSum[<span class="number">0</span>]</span><br><span class="line">  <span class="keyword">if</span> newCenterSum[<span class="number">1</span>] &gt; <span class="number">0</span> :</span><br><span class="line">    center[<span class="number">1</span>] = newCenter[<span class="number">1</span>]/newCenterSum[<span class="number">1</span>]</span><br><span class="line">  <span class="keyword">if</span> newCenterSum[<span class="number">2</span>] &gt; <span class="number">0</span> :</span><br><span class="line">    center[<span class="number">2</span>] = newCenter[<span class="number">2</span>]/newCenterSum[<span class="number">2</span>]</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">showPic</span>(<span class="params">x,label,label1</span>):</span><br><span class="line">  figure, ax = plt.subplots()</span><br><span class="line">  ax.set_xlim(left=-<span class="number">1</span>, right=<span class="number">4</span>)</span><br><span class="line">  ax.set_ylim(bottom=-<span class="number">1</span>, top=<span class="number">4</span>)</span><br><span class="line">  <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(<span class="built_in">len</span>(x)):</span><br><span class="line">    <span class="keyword">if</span> label[i] == <span class="number">0</span>:</span><br><span class="line">      plt.plot(x[i][<span class="number">0</span>], x[i][<span class="number">1</span>], <span class="string">&#x27;b--&#x27;</span>, marker=<span class="string">&#x27;+&#x27;</span>, color=<span class="string">&#x27;r&#x27;</span>)</span><br><span class="line">    <span class="keyword">elif</span> label[i] == <span class="number">1</span>:</span><br><span class="line">      plt.plot(x[i][<span class="number">0</span>], x[i][<span class="number">1</span>], <span class="string">&#x27;b--&#x27;</span>, marker=<span class="string">&#x27;o&#x27;</span>, color=<span class="string">&#x27;g&#x27;</span>)</span><br><span class="line">    <span class="keyword">elif</span> label[i] == <span class="number">2</span>:</span><br><span class="line">      plt.plot(x[i][<span class="number">0</span>], x[i][<span class="number">1</span>], <span class="string">&#x27;b--&#x27;</span>, marker=<span class="string">&#x27;*&#x27;</span>, color=<span class="string">&#x27;b&#x27;</span>)</span><br><span class="line">  figure, ax = plt.subplots()</span><br><span class="line">  ax.set_xlim(left=-<span class="number">1</span>, right=<span class="number">4</span>)</span><br><span class="line">  ax.set_ylim(bottom=-<span class="number">1</span>, top=<span class="number">4</span>)</span><br><span class="line">  <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(<span class="built_in">len</span>(x)):</span><br><span class="line">    <span class="keyword">if</span> label1[i] == <span class="number">0</span>:</span><br><span class="line">      plt.plot(x[i][<span class="number">0</span>], x[i][<span class="number">1</span>], <span class="string">&#x27;b--&#x27;</span>, marker=<span class="string">&#x27;+&#x27;</span>, color=<span class="string">&#x27;r&#x27;</span>)</span><br><span class="line">    <span class="keyword">elif</span> label1[i] == <span class="number">1</span>:</span><br><span class="line">      plt.plot(x[i][<span class="number">0</span>], x[i][<span class="number">1</span>], <span class="string">&#x27;b--&#x27;</span>, marker=<span class="string">&#x27;o&#x27;</span>, color=<span class="string">&#x27;g&#x27;</span>)</span><br><span class="line">    <span class="keyword">elif</span> label1[i] == <span class="number">2</span>:</span><br><span class="line">      plt.plot(x[i][<span class="number">0</span>], x[i][<span class="number">1</span>], <span class="string">&#x27;b--&#x27;</span>, marker=<span class="string">&#x27;*&#x27;</span>, color=<span class="string">&#x27;b&#x27;</span>)</span><br><span class="line">  plt.show()</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> __name__==<span class="string">&quot;__main__&quot;</span>:</span><br><span class="line"></span><br><span class="line">  <span class="comment"># 0 make data</span></span><br><span class="line">  data=makeData()</span><br><span class="line"></span><br><span class="line">  <span class="comment"># 1 initial</span></span><br><span class="line">  n = <span class="built_in">len</span>(data)</span><br><span class="line">  label = np.zeros(n)       <span class="comment"># 0,1,2 represent center[0],center[1],center[2]</span></span><br><span class="line">  center = np.array([[<span class="number">0.0</span>,<span class="number">3.0</span>],[<span class="number">3.0</span>,<span class="number">3.0</span>],[<span class="number">0.0</span>,<span class="number">0.0</span>]])</span><br><span class="line">  label1 = np.zeros(n)</span><br><span class="line">  center1 = np.array([[<span class="number">0.0</span>,<span class="number">10.0</span>],[<span class="number">2.0</span>,<span class="number">3.0</span>],[<span class="number">0.5</span>,<span class="number">5.0</span>]])</span><br><span class="line"></span><br><span class="line">  <span class="comment"># 2. trainning</span></span><br><span class="line">  <span class="comment"># 2.1 trainning for good initial</span></span><br><span class="line">  <span class="keyword">while</span> <span class="literal">True</span>:</span><br><span class="line">    <span class="comment"># update label</span></span><br><span class="line">    numChanged = updateLable(data,label,center)</span><br><span class="line">    <span class="comment"># update center</span></span><br><span class="line">    updateCenter(data,label,center)</span><br><span class="line">    <span class="keyword">if</span> numChanged==<span class="number">0</span>:</span><br><span class="line">      <span class="keyword">break</span></span><br><span class="line"></span><br><span class="line">  <span class="comment"># 2.1 trainning for bad initial</span></span><br><span class="line">  <span class="keyword">while</span> <span class="literal">True</span>:</span><br><span class="line">    <span class="comment"># update label</span></span><br><span class="line">    numChanged = updateLable(data,label1,center1)</span><br><span class="line">    <span class="comment"># update center</span></span><br><span class="line">    updateCenter(data,label1,center1)</span><br><span class="line">    <span class="keyword">if</span> numChanged==<span class="number">0</span>:</span><br><span class="line">      <span class="keyword">break</span></span><br><span class="line"></span><br><span class="line">  <span class="comment"># 3. showData</span></span><br><span class="line">  showPic(data,label,label1)</span><br></pre></td></tr></table></figure>
+
+<p>下面是随机产生的基于(1，1),(2，2),(1,2)的高斯分布。</p>
+<img src="/images/机器学习/非监督学习-kmeans实验原始数据.png" width=50% height=50% text-align=center/>
+
+<p>然后我们从(0.0,3.0),(3.0,3.0),(0.0,0.0)开始迭代得到如下效果，可以看出结果还是非常理想的。</p>
+<img src="/images/机器学习/非监督学习-kmeans实验结果1.png" width=50% height=50% text-align=center/>
+
+<p>然后我们试图从(0.0,10.0),(2.0,3.0),(0.5,5.0)开始迭代,则会得到这样的结果。</p>
+<img src="/images/机器学习/非监督学习-kmeans实验结果2.png" width=50% height=50% text-align=center/>
+
+<p>可以从上文中看出，k-means对初始值的敏感度很高。对于现实问题，也许我们并不知道训练样本中本身存在多个分类，我们可以设置多个分类，如果某一个分类里面的样本过少，就删除分类，这样就不再依赖于事先知道分类的数量了。</p>
+<h3 id="1-2-高斯混合聚类"><a href="#1-2-高斯混合聚类" class="headerlink" title="1.2 高斯混合聚类"></a>1.2 高斯混合聚类</h3><p>假设我们的分类都服从于各自的高斯分布，我们试图从样本中对其分类。该问题与之前的高斯判别分析类似，区别仅仅在于该问题没有样本标签。<br>我们设置z表示样本的距离分类，可以知道他服从一个多项式分布, \({z^{(i)}} \sim Multinomial(\phi )\)，其中。然后已经\(z\)之后，\(x\)服从的是一个高斯分布，\({x^{(i)}}|{z^{(i)}} &#x3D; j \sim N({\mu _j},{\Sigma _j})\)。</p>
+<p>下面直接写出算法过程(具体的算法推导见EM算法小节)：</p>
+<ul>
+<li>(1)	随机初始化\(\phi\),\(\mu\),\(\Sigma\)。</li>
+<li>(2)	遍历样本，计算得\([w _j^{(i)}\),如下：</li>
+</ul>
+
+$$w _j^{(i)} = p({z^{(i)}} = j|{x^{(i)}},\phi ,\mu ,\Sigma )$$$$w _j^{(i)} = p({z^{(i)}} = j|{x^{(i)}},\phi ,\mu ,\Sigma ) = \frac{{p({z^{(i)}} = j,{x^{(i)}})}}{{p({x^{(i)}})}} = \frac{{p({z^{(i)}} = j,{x^{(i)}})}}{{\sum\limits _{j = 1}^k {p({x^{(i)}},{z^{(i)}} = j)} }}$$
+
+<ul>
+<li>(3)	根据计算得到的\(w\)重新更新各个分类的分布，如下：</li>
+</ul>
+
+$${\phi _j} = \frac{1}{m}\sum\limits _{i = 1}^m {1\{ {z^{(i)}} = j\} } $$
+$${\mu _j} = \frac{{\sum\limits _{i = 1}^m {1\{ {z^{(i)}} = j\} } {x^{(i)}}}}{{\sum\limits _{i = 1}^m {1\{ {z^{(i)}} = j\} } }}$$
+
+$${\Sigma _j} = \frac{{\sum\limits _{i = 1}^m {1\{ {z^{(i)}} = j\} } ({x^{(i)}} - {\mu _j}){{({x^{(i)}} - {\mu _j})}^T}}}{{\sum\limits _{i = 1}^m {1\{ {z^{(i)}} = j\} } }}$$
+
+
+<ul>
+<li>(4)	重复2,3知道达到截止条件。</li>
+</ul>
+<p>下面我们制作一组由三个高斯分布组成的样本数据，对其进行聚类。代码如下:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># coding=utf-8</span></span><br><span class="line"><span class="keyword">import</span> numpy <span class="keyword">as</span> np</span><br><span class="line"><span class="keyword">from</span> matplotlib <span class="keyword">import</span> pyplot <span class="keyword">as</span> plt</span><br><span class="line"><span class="keyword">from</span> scipy.stats <span class="keyword">import</span> multivariate_normal</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">make_data</span>():</span><br><span class="line">  mean_1 = [<span class="number">1</span>,<span class="number">1</span>]</span><br><span class="line">  mean_2 = [<span class="number">4</span>,<span class="number">4</span>]</span><br><span class="line">  mean_3 = [<span class="number">1</span>,<span class="number">4</span>]</span><br><span class="line">  cov1 = [[<span class="number">0.1</span>,<span class="number">0</span>],[<span class="number">0</span>,<span class="number">0.1</span>]]</span><br><span class="line">  cov2 = [[<span class="number">0.2</span>,<span class="number">0</span>],[<span class="number">0</span>,<span class="number">0.2</span>]]</span><br><span class="line">  cov3 = [[<span class="number">0.6</span>,<span class="number">0</span>],[<span class="number">0</span>,<span class="number">0.6</span>]]</span><br><span class="line">  arr1 = np.random.multivariate_normal(mean_1, cov1, <span class="number">100</span>)</span><br><span class="line">  arr2 = np.random.multivariate_normal(mean_2, cov2, <span class="number">50</span>)</span><br><span class="line">  arr3 = np.random.multivariate_normal(mean_3, cov3, <span class="number">50</span>)</span><br><span class="line">  figure, ax = plt.subplots()</span><br><span class="line">  ax.set_xlim(left=-<span class="number">4</span>, right=<span class="number">8</span>)</span><br><span class="line">  ax.set_ylim(bottom=-<span class="number">4</span>, top=<span class="number">8</span>)</span><br><span class="line">  <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(<span class="built_in">len</span>(arr1)):</span><br><span class="line">    plt.plot(arr1[i][<span class="number">0</span>], arr1[i][<span class="number">1</span>], <span class="string">&#x27;b--&#x27;</span>, marker=<span class="string">&#x27;+&#x27;</span>, color=<span class="string">&#x27;r&#x27;</span>)</span><br><span class="line">  <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(<span class="built_in">len</span>(arr2)):</span><br><span class="line">    plt.plot(arr2[i][<span class="number">0</span>], arr2[i][<span class="number">1</span>], <span class="string">&#x27;b--&#x27;</span>, marker=<span class="string">&#x27;o&#x27;</span>, color=<span class="string">&#x27;g&#x27;</span>)</span><br><span class="line">  <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(<span class="built_in">len</span>(arr3)):</span><br><span class="line">    plt.plot(arr3[i][<span class="number">0</span>], arr2[i][<span class="number">1</span>], <span class="string">&#x27;b--&#x27;</span>, marker=<span class="string">&#x27;*&#x27;</span>, color=<span class="string">&#x27;b&#x27;</span>)</span><br><span class="line">  plt.xlabel(<span class="string">&quot;x1&quot;</span>)</span><br><span class="line">  plt.ylabel(<span class="string">&quot;x2&quot;</span>)</span><br><span class="line">  plt.plot()</span><br><span class="line">  plt.title(<span class="string">&quot;sample&quot;</span>)</span><br><span class="line">  <span class="comment">#plt.show()</span></span><br><span class="line">  <span class="keyword">return</span> np.vstack((arr1, arr2, arr3))</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">updatePhi</span>(<span class="params">w</span>):</span><br><span class="line">  n1 = <span class="built_in">len</span>(w)</span><br><span class="line">  phi=np.zeros(n1)</span><br><span class="line">  <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(n1):</span><br><span class="line">    <span class="built_in">sum</span> = <span class="number">0</span></span><br><span class="line">    n2 = <span class="built_in">len</span>(w[i])</span><br><span class="line">    <span class="keyword">for</span> j <span class="keyword">in</span> <span class="built_in">range</span>(n2):</span><br><span class="line">      <span class="built_in">sum</span> = <span class="built_in">sum</span> + w[i][j]</span><br><span class="line">    phi[i] = <span class="built_in">sum</span>/n2</span><br><span class="line">  <span class="keyword">return</span> phi</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">updateW</span>(<span class="params">data,w,phi,mu,sigma</span>):</span><br><span class="line">  n1=<span class="built_in">len</span>(w)           <span class="comment"># 3</span></span><br><span class="line">  n2 = <span class="built_in">len</span>(w[<span class="number">0</span>])      <span class="comment"># 200</span></span><br><span class="line">  var = []</span><br><span class="line">  <span class="keyword">for</span> k <span class="keyword">in</span> <span class="built_in">range</span>(n1):</span><br><span class="line">    var.append(multivariate_normal(mean=mu[k].tolist(), cov=sigma[k].tolist()))</span><br><span class="line"></span><br><span class="line">  <span class="keyword">for</span> j <span class="keyword">in</span> <span class="built_in">range</span>(n2):</span><br><span class="line">    <span class="built_in">sum</span> = <span class="number">0</span></span><br><span class="line">    <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(n1):</span><br><span class="line">      <span class="built_in">sum</span> = <span class="built_in">sum</span> + var[i].pdf(data[j])*phi[i]</span><br><span class="line">    <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(n1):</span><br><span class="line">      w[i][j] = var[i].pdf(data[j])*phi[i]/<span class="built_in">sum</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">updateMu</span>(<span class="params">data,w,mu</span>):</span><br><span class="line">  changed=<span class="literal">False</span></span><br><span class="line">  n1 = <span class="built_in">len</span>(w)  <span class="comment"># 3</span></span><br><span class="line">  n2 = <span class="built_in">len</span>(w[<span class="number">0</span>])  <span class="comment"># 200</span></span><br><span class="line">  <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(n1):</span><br><span class="line">    sumW = <span class="number">0.0</span></span><br><span class="line">    sumX = np.array([<span class="number">0.0</span>,<span class="number">0.0</span>])</span><br><span class="line">    <span class="keyword">for</span> j <span class="keyword">in</span> <span class="built_in">range</span>(n2):</span><br><span class="line">      sumW = sumW + w[i][j]</span><br><span class="line">      sumX = sumX + w[i][j]*data[j]</span><br><span class="line">    mu_new = sumX / sumW</span><br><span class="line">    <span class="keyword">if</span> np.dot(mu_new-mu[i],mu_new-mu[i]) &gt; <span class="number">0.001</span>:</span><br><span class="line">      changed = <span class="literal">True</span></span><br><span class="line">    mu[i] = mu_new</span><br><span class="line">  <span class="keyword">return</span> changed</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">updateSigma</span>(<span class="params">data,w,mu,sigma</span>):</span><br><span class="line">  n1 = <span class="built_in">len</span>(w)  <span class="comment"># 3</span></span><br><span class="line">  n2 = <span class="built_in">len</span>(w[<span class="number">0</span>])  <span class="comment"># 200</span></span><br><span class="line">  <span class="built_in">sum</span>=np.array([[<span class="number">0</span>,<span class="number">0</span>],[<span class="number">0</span>,<span class="number">0</span>]])</span><br><span class="line">  <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(n1):</span><br><span class="line">    sumW = <span class="number">0.0</span></span><br><span class="line">    sumX = np.array([<span class="number">0.0</span>,<span class="number">0.0</span>])</span><br><span class="line">    <span class="keyword">for</span> j <span class="keyword">in</span> <span class="built_in">range</span>(n2):</span><br><span class="line">      sumW = sumW + w[i][j]</span><br><span class="line">      z0 = np.array([data[j] - mu[i]])</span><br><span class="line">      z0T = np.array([data[j] - mu[i]]).transpose()</span><br><span class="line">      sumX = sumX + w[i][j]*np.dot(z0T, z0)</span><br><span class="line">    sigma[i] = sumX/sumW</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">classify</span>(<span class="params">data,mu,sigma</span>):</span><br><span class="line">  n1=<span class="built_in">len</span>(w)           <span class="comment"># 3</span></span><br><span class="line">  n2 = <span class="built_in">len</span>(w[<span class="number">0</span>])      <span class="comment"># 200</span></span><br><span class="line">  var=[]</span><br><span class="line">  <span class="keyword">for</span> k <span class="keyword">in</span> <span class="built_in">range</span>(n1):</span><br><span class="line">    var.append(multivariate_normal(mean=mu[k].tolist(), cov=sigma[k].tolist()))</span><br><span class="line"></span><br><span class="line">  figure, ax = plt.subplots()</span><br><span class="line">  ax.set_xlim(left=-<span class="number">4</span>, right=<span class="number">8</span>)</span><br><span class="line">  ax.set_ylim(bottom=-<span class="number">4</span>, top=<span class="number">8</span>)</span><br><span class="line"></span><br><span class="line">  <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(n2):</span><br><span class="line">    tmp_arr=np.array([])</span><br><span class="line">    <span class="keyword">for</span> j <span class="keyword">in</span> <span class="built_in">range</span>(n1):</span><br><span class="line">      tmp_arr=np.append(tmp_arr,var[j].pdf(data[i]))</span><br><span class="line">    index = tmp_arr.argmax()</span><br><span class="line">    <span class="keyword">if</span> index == <span class="number">0</span>:</span><br><span class="line">      plt.plot(data[i][<span class="number">0</span>], data[i][<span class="number">1</span>], <span class="string">&#x27;b--&#x27;</span>, marker=<span class="string">&#x27;+&#x27;</span>, color=<span class="string">&#x27;r&#x27;</span>)</span><br><span class="line">    <span class="keyword">elif</span> index == <span class="number">1</span>:</span><br><span class="line">      plt.plot(data[i][<span class="number">0</span>], data[i][<span class="number">1</span>], <span class="string">&#x27;b--&#x27;</span>, marker=<span class="string">&#x27;o&#x27;</span>, color=<span class="string">&#x27;g&#x27;</span>)</span><br><span class="line">    <span class="keyword">elif</span> index == <span class="number">2</span>:</span><br><span class="line">      plt.plot(data[i][<span class="number">0</span>], data[i][<span class="number">1</span>], <span class="string">&#x27;b--&#x27;</span>, marker=<span class="string">&#x27;o&#x27;</span>, color=<span class="string">&#x27;b&#x27;</span>)</span><br><span class="line">  plt.xlabel(<span class="string">&quot;x1&quot;</span>)</span><br><span class="line">  plt.ylabel(<span class="string">&quot;x2&quot;</span>)</span><br><span class="line">  plt.title(<span class="string">&quot;result&quot;</span>)</span><br><span class="line">  plt.plot()</span><br><span class="line">  plt.show()</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> __name__ == <span class="string">&quot;__main__&quot;</span>:</span><br><span class="line">  <span class="comment"># 1 make data</span></span><br><span class="line">  classN=<span class="number">3</span></span><br><span class="line">  data=make_data()</span><br><span class="line">  n=<span class="built_in">len</span>(data)</span><br><span class="line">  <span class="keyword">for</span> k <span class="keyword">in</span> <span class="built_in">range</span>(n):</span><br><span class="line">    w = np.array([np.zeros(n), np.zeros(n), np.zeros(n)])</span><br><span class="line">  <span class="comment"># w = array[classN][n] =array[3][200]</span></span><br><span class="line">  <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(classN):</span><br><span class="line">    <span class="keyword">for</span> j <span class="keyword">in</span> <span class="built_in">range</span>(n):</span><br><span class="line">      w[i][j]= <span class="number">1.0</span>/classN</span><br><span class="line"></span><br><span class="line">  phi=updatePhi(w)</span><br><span class="line">  mu = np.array([[<span class="number">6.0</span>, <span class="number">6.0</span>], [<span class="number">4.0</span>, -<span class="number">1.0</span>], [-<span class="number">2.0</span>, <span class="number">2.0</span>]])</span><br><span class="line">  sigma=np.array([[[<span class="number">0.1</span>,<span class="number">0</span>],[<span class="number">0</span>,<span class="number">0.1</span>]],[[<span class="number">0.1</span>,<span class="number">0</span>],[<span class="number">0</span>,<span class="number">0.1</span>]],[[<span class="number">0.1</span>,<span class="number">0</span>],[<span class="number">0</span>,<span class="number">0.1</span>]]])</span><br><span class="line"></span><br><span class="line">  <span class="comment"># 2 training</span></span><br><span class="line">  <span class="keyword">while</span> <span class="literal">True</span>:</span><br><span class="line">    updateW(data,w,phi,mu,sigma)</span><br><span class="line">    updatePhi(w)</span><br><span class="line">    updateSigma(data,w,mu,sigma)</span><br><span class="line">    changed = updateMu(data,w,mu)</span><br><span class="line">    <span class="keyword">if</span> changed == <span class="literal">False</span>:</span><br><span class="line">      <span class="built_in">print</span>(<span class="string">&quot;迭代完成&quot;</span>)</span><br><span class="line">      <span class="keyword">break</span></span><br><span class="line"></span><br><span class="line">  <span class="comment"># 3 show</span></span><br><span class="line">  <span class="built_in">print</span>(<span class="string">&quot;mu=&quot;</span>,mu,<span class="string">&quot;, sigma=&quot;</span>,sigma)</span><br><span class="line">  classify(data,mu,sigma)</span><br></pre></td></tr></table></figure>
+
+<p>我们分别以[6.0, 6.0], [4.0, -1.0], [-2.0, 2.0]为均值，以[[0.1,0],[0,0.1]],[[0.1,0],[0,0.1]],[[0.1,0],[0,0.1]]为标准差生成一组高斯分布如下：</p>
+<img src="/images/机器学习/非监督学习-高斯混合聚类原始数据.png" width=50% height=50% text-align=center/>
+
+<p>然后通过训练的到的训练均值分别为[4.00729834, 3.99848889], [1.01089497,  1.05225006], [0.92949217, 4.18380895]]。标准差为[[0.23196114,-0.01896477],[-0.01896477, 0.17165715]], [[0.10205901, 0.00157192], [0.00157192,  0.11477843]], [[0.7010517, 0.04783335], [0.04783335, 0.51147277]]。具体结果如下:</p>
+<img src="/images/机器学习/非监督学习-高斯混合聚类实验结果.png" width=50% height=50% text-align=center/>
+### 2.1 Jensen不等式
+对于一个严格凸函数,即\\(f''(x) \geqslant 0\\)，我们容易得到下式:
+
+$$E[f(x)] \geqslant f(E[x])$$
+
+
+<p>当且仅当x为常数的时候，上式等号成立。对于严格凹函数，则正好相反。</p>
+<h3 id="2-2-EM算法模型建立"><a href="#2-2-EM算法模型建立" class="headerlink" title="2.2 EM算法模型建立"></a>2.2 EM算法模型建立</h3><p>假定我们的数据有\(k\)个分类。我们聚类的目标是，样本在自己分类中出现的概率最大。或者换句话说，让其在所属分类的分布(可以用高斯分类假想该问题)中出现的概率最大。可是对于非监督学习问题，我们不知道具体的分类。因此，我们可以将模型假定为找到给定参数\(\theta\)对应分布，是的\(x\)在分布中出现的概率足够大，这说明(\theta\)对应的分布能够充分的表示某一组分类。因此可以构造如下的最大释然函数：</p>
+
+$$\ell (\theta ) = \sum\limits _{i = 1}^m {\ln p({x^{(i)}};\theta )} $$
+
+<p>进入推导最大释然函数：</p>
+$$\ell (\theta ) = \sum\limits _{i = 1}^m {\ln \sum\limits _{j = 1}^k {p({x^{(i)}},{z^{(j)}};\theta )} }  = \sum\limits _{i = 1}^m {\ln \sum\limits _{j = 1}^k {{Q _i}({z^{(i)}} = j)\frac{{p({x^{(i)}},{z^{(i)}} = j;\theta )}}{{{Q _i}({z^{(i)}} = j)}}} } $$
+
+
+<p>上面\(k\)为分类的个数。对上面的\({Q _i}\)为一个概率分布，有:</p>
+
+$$\sum\limits _{j=1} ^k {{Q _i}({z^{(i)}}=j)}=1$$
+
+
+<p>对于\(f(x) &#x3D; \ln x\),我们知道\(f’’(x) &#x3D;  - \frac{1}{x^2}\),可知其为一个严格凹函数。上式可以写成：</p>
+
+$$\ell (\theta ) = \sum\limits _{i = 1}^m {f(E[\frac{{p({x^{(i)}},{z^{(i)}} = j;\theta )}}{{{Q _i}({z^{(i)}} = j)}}])}$$
+
+
+<p>根据Jensen不等式，我们有:</p>
+$$\ell (\theta ) = \sum\limits _{i = 1}^m {f(E[\frac{p({x^{(i)},{z^{(i)}};\theta )}}{{Q _i}({z^{(i)}} = j)}])} \geqslant \sum\limits _{i = 1}^m {E[f(\frac{p({x^{(i)}},{z^{(i)}} = j;\theta )}{{Q _i}({z^{(i)}} = j)})]} = \sum\limits _{i = 1}^m {\sum\limits _{j = 1}^k {{Q _i}({z^{(i)}} = j)\ln (\frac{p({x^{(i)}},{z^{(i)}} = j;\theta )}{{Q _i}({z^{(i)}} = j)})} }$$
+
+
+<p>因此我们得到最大释然函数的下确定，即为上式子中后面的部分。我们只要保证下确定随着迭代的方向单调递增即可，具体的要保证\(\ell ({\theta ^{(t + 1)}}) \geqslant \ell ({\theta ^{(t)}})\)。这里我们设\(low(\theta )\)是已知\({Q _i}\)的情况下，最大释然函数的下确定关于\(\theta\)的函数。我们看如下公式:</p>
+
+$$\ell ({\theta ^{(t + 1)}}) \geqslant low({\theta ^{(t + 1)}}) \geqslant low({\theta ^{(t)}}) = \ell ({\theta ^{(t)}})$$
+
+<p>事实上，我们只要保证上面的式子我们就可以保证迭代方向是正确的。其中，第一个不等号是必然成立的。那我们分头来构造条件是后面的式子成立。<br>首先如果保证最后一个等号的成立，根据Jensen不等式，只有自变量为常数才能事等号成立，这样我们设置如下式子(其中\(c\)为常数):</p>
+
+$$\frac{{p({x^{(i)}},{z^{(i)}} = j;\theta )}}{{{Q _i}({z^{(i)}} = j)}} = c$$
+
+
+<p>然后对上面的式子按照分类累积求和得:</p>
+$$\sum\limits _{j = 1}^k {p({x^{(i)}},{z^{(i)}} = j;\theta )}  = c\sum\limits _{j = 1}^k {{Q _i}({z^{(i)}} = j)}  = c$$
+
+<p>因此得:</p>
+
+$${Q _i}({z^{(i)}} = j) = \frac{{p({x^{(i)}},{z^{(i)}} = j;\theta )}}{{\sum\limits _{j = 1}^k {p({x^{(i)}},{z^{(i)}} = j;\theta )} }} = p({z^{(i)}}|{x^{(i)}};\theta)$$
+
+
+<p>这样我们完成EM算法的E步骤。然后解决中间大于等于号的问题。这个就比较好解决了，我们只需要计算下确定函数关于\(\theta\)求最大值，最大值对应的参数，可保证不等号的成立，即为迭代的正确方向。具体公式如下：</p>
+
+$$\theta  = \arg {\max _\theta }\sum\limits _{i = 1}^m {\sum\limits _{j = 1}^k {{Q _i}({z^{(i)}} = j)\ln \frac{{p({x^{(i)}},{z^{(i)}} = j;\theta )}}{{{Q _i}({z^{(i)}} = j)}}} }$$
+
+<p>综上，我们来重新整理一下EM算法，具体如下：</p>
+<ul>
+<li>(1) 初始化相关参数</li>
+<li>(2) E步骤:计算\({Q _i}\)，如下：</li>
+</ul>
+
+$${Q _i}({z^{(i)}} = j) = p({z^{(i)}}|{x^{(i)}};\theta)$$
+
+<ul>
+<li>(3) M步骤：更新参数\(\theta\)，如下：</li>
+</ul>
+
+$$\theta  = \arg {\max _\theta }\sum\limits _{i = 1}^m {\sum\limits _{j = 1}^k {{Q _i}({z^{(i)}} = j)\ln \frac{{p({x^{(i)}},{z^{(i)}} = j;\theta )}}{{{Q _i}({z^{(i)}} = j)}}} } $$
+
+<p>(4)	重复2,3直到截止条件</p>
+<p>注: 上面的例子是不断的更新迭代\({Q _i}\)和\(\theta\)。我们完全可以使用梯度上升发不断从各个方向更新\({Q _i}\)和\(\theta\)，来完成最大值的逼近。</p>
+<h3 id="2-3-混合高斯分布的公式推导"><a href="#2-3-混合高斯分布的公式推导" class="headerlink" title="2.3 混合高斯分布的公式推导"></a>2.3 混合高斯分布的公式推导</h3><p>对比之前的内容，我们可以发现混合高斯分布的聚类问题为EM算法的一个特例。可以通过通用的EM算法来证明，下面我们来证明这一过程。</p>
+<p>注： 这里只简单地提示计算，不展开了，因为与之前的高斯判别分析类似。<br>根据上一节，我们已得到E步骤的公式：</p>
+
+$$w _j^{(i)}={Q _i}({z^{(i)}}=j) = p({z^{(i)}}|{x^{(i)}};\theta )$$
+
+
+<p>然后对于M步骤，我们将\({Q _i}\)为一个已知值的方式对\(\theta\)进行求导，从而求得下确定的最大值，记为下一个迭代值。将最大释然函数展开记为如下函数：</p>
+$$\ell (\theta ) = \sum\limits _{i = 1}^m {\sum\limits _{j = 1}^k {{Q _i}({z^{(i)}} = j)\ln (\frac{{p({x^{(i)}},{z^{(i)}} = j;\theta )}}{{{Q _i}({z^{(i)}} = j)}})} }  = \sum\limits _{i = 1}^m {\sum\limits _{j = 1}^k {w _j^{(i)}\ln (\frac{{\frac{1}{{{{(2\pi )}^{\frac{n}{2}}}|\Sigma {|^{\frac{1}{2}}}}}\exp ( - \frac{1}{2}{{({x^{(i)}} - {\mu _j})}^T}{\Sigma ^{ - 1}}({x^{(i)}} - {\mu _j})){\phi _j}}}{{w _j^{(i)}}})} } $$
+
+<p>然后对\(\phi\),\(\mu\),\(\Sigma\), 即可得到M步骤的更新公式。</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://example.com/2017/09/24/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-3-1-%E9%9D%9E%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0%E4%B9%8B%E8%81%9A%E7%B1%BB/" data-id="cuidZmoKIMtKQLIfMS5aJHZtC" data-title="机器学习-3.1-非监督学习之聚类.md" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      
+      
+      
+    </footer>
+  </div>
+  
+    
+<nav id="article-nav">
+  
+    <a href="/2017/10/15/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-2-8-%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0%E4%B9%8Bk%E8%BF%91%E9%82%BB%E7%AE%97%E6%B3%95/" id="article-nav-newer" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Newer</strong>
+      <div class="article-nav-title">
+        
+          机器学习-2.8-监督学习之k近邻算法
+        
+      </div>
+    </a>
+  
+  
+    <a href="/2017/09/08/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-2-7-%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0%E4%B9%8B%E6%94%AF%E6%8C%81%E5%90%91%E9%87%8F%E6%9C%BA/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">机器学习-2.7-监督学习之支持向量机</div>
+    </a>
+  
+</nav>
+
+  
+</article>
+
+
+</section>
+        
+          <aside id="sidebar">
+  
+    
+
+  
+    
+
+  
+    
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Archives</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2025/02/">February 2025</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2023/12/">December 2023</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/10/">October 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">September 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/08/">August 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/07/">July 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/06/">June 2017</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Recent Posts</h3>
+    <div class="widget">
+      <ul>
+        
+          <li>
+            <a href="/2025/02/07/ErasuceCode%E7%AE%97%E6%B3%95%E5%AE%9E%E7%8E%B0/">(no title)</a>
+          </li>
+        
+          <li>
+            <a href="/2023/12/25/RSS-%E8%BF%9C%E7%A8%8BMerge%E7%9A%84%E8%AE%BE%E8%AE%A1/">RSS-远程Merge的设计</a>
+          </li>
+        
+          <li>
+            <a href="/2023/12/25/RSS-%E8%BF%9C%E7%A8%8BMerge%E7%9A%84%E8%AE%BE%E8%AE%A1EN/">RSS-Remote Merge Design</a>
+          </li>
+        
+          <li>
+            <a href="/2017/10/22/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-3-2-%E9%9D%9E%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0%E4%B9%8B%E4%B8%BB%E6%88%90%E5%88%86%E5%88%86%E6%9E%90/">机器学习-3.2-非监督学习之主成分分析.md</a>
+          </li>
+        
+          <li>
+            <a href="/2017/10/15/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-2-8-%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0%E4%B9%8Bk%E8%BF%91%E9%82%BB%E7%AE%97%E6%B3%95/">机器学习-2.8-监督学习之k近邻算法</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+  
+</aside>
+        
+      </div>
+      <footer id="footer">
+  
+  <div class="outer">
+    <div id="footer-info" class="inner">
+      
+      &copy; 2025 zhengchenyu<br>
+      Powered by <a href="https://hexo.io/" target="_blank">Hexo</a>
+    </div>
+  </div>
+</footer>
+
+    </div>
+    <nav id="mobile-nav">
+  
+    <a href="/" class="mobile-nav-link">Home</a>
+  
+    <a href="/archives" class="mobile-nav-link">Archives</a>
+  
+</nav>
+    
+
+
+<script src="/js/jquery-3.6.4.min.js"></script>
+
+
+
+  
+<script src="/fancybox/jquery.fancybox.min.js"></script>
+
+
+
+
+<script src="/js/script.js"></script>
+
+
+
+
+
+  </div>
+</body>
+</html>
