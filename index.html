@@ -71,6 +71,212 @@
       <div class="outer">
         <section id="main">
   
+    <article id="post-弹性训练" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
+  <div class="article-meta">
+    <a href="/2026/04/14/%E5%BC%B9%E6%80%A7%E8%AE%AD%E7%BB%83/" class="article-date">
+  <time class="dt-published" datetime="2026-04-14T12:08:00.000Z" itemprop="datePublished">2026-04-14</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="p-name article-title" href="/2026/04/14/%E5%BC%B9%E6%80%A7%E8%AE%AD%E7%BB%83/">弹性训练</a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="e-content article-entry" itemprop="articleBody">
+      
+        <h1 id="1-背景"><a href="#1-背景" class="headerlink" title="1 背景"></a>1 背景</h1><p>传统GPU资源池采用固定的分配模式，存在明显短板：空闲时段GPU算力闲置，无法转化为实际效率；而任务集中时，资源池又会陷入紧张，高优先级任务因算力不足被迫排队，低优先级任务却占用固定资源，导致整体调度失衡。为破解这一资源利用困境，本文提出弹性训练，核心目标是实现GPU资源池的最大化高效利用。其核心逻辑为”按需伸缩”：当资源池存在空闲GPU时，自动为正在执行的任务扩容分配额外算力，缩短任务完成周期；当资源供不应求时，智能识别并缩容低优先级任务的资源占用，将释放的GPU算力优先供给高优先级任务，实现资源在多任务间的灵活共享与最优配置。</p>
+<h1 id="2-问题分析"><a href="#2-问题分析" class="headerlink" title="2 问题分析"></a>2 问题分析</h1><p>弹性训练是指根据集群资源情况动态调整训练的数据并行数的训练方式。因此存在如下三个问题：</p>
+<ul>
+<li><p>计算损失</p>
+<p>动态扩缩容或软硬件故障，无疑会引发训练任务的重启，因此会导致算力浪费。</p>
+</li>
+<li><p>准确性</p>
+<p>弹性训练无疑会引发工作节点数量发生变化，进而导致batch发的变化，因此可能引发计算不一致。</p>
+</li>
+<li><p>与调度框架适配</p>
+<p>新的架构也需要与调度框架进行适配</p>
+</li>
+</ul>
+<p>接下来依次介绍这三个问题。</p>
+<h2 id="3-降低计算损失的影响"><a href="#3-降低计算损失的影响" class="headerlink" title="3 降低计算损失的影响"></a>3 降低计算损失的影响</h2><p>分布式训练任务在训练之前需要确定全局进程数<code>WORLD_SIZE</code>​，进程编号<code>RANK</code>​，本地进程编号<code>LOCAL_RANK</code>​等信息。并通过<code>WORLD_SIZE</code>​和<code>RANK</code>​来给进程分配样本。当出现弹性扩缩容时，<code>WORLD_SIZE</code>会发生变化，需要重新启动任务以配置新的分布式参数。重启的任务需要从上一次checkpoint开始训练，因此出现了计算损失。</p>
+<p>软硬件故障也会引发分布式训练任务重启，从而造成计算损失。弹性扩缩容则进一步增加了任务重启的概率，因此意味着弹性训练要求极致的故障恢复。我们对训练架构的改造划分为两个阶段:</p>
+<ul>
+<li>阶段1: 极致的Checkpoint优化避免计算损失</li>
+<li>阶段2: 训练框架层实现动态扩缩容</li>
+</ul>
+<h2 id="3-1-阶段1-极致的Checkpoint优化避免计算损失"><a href="#3-1-阶段1-极致的Checkpoint优化避免计算损失" class="headerlink" title="3.1 阶段1: 极致的Checkpoint优化避免计算损失"></a>3.1 阶段1: 极致的Checkpoint优化避免计算损失</h2><h3 id="3-1-1-Checkpiont优化分析"><a href="#3-1-1-Checkpiont优化分析" class="headerlink" title="3.1.1 Checkpiont优化分析"></a>3.1.1 Checkpiont优化分析</h3><p>既然重启的训练任务要从上一次checkpoint中恢复，那么最简单的方式就是优化checkpoint的时间，从而提升checkpoint的频率，降低计算损失。</p>
+<p>PyTorch默认的checkpoint是同步相对耗时的操作，有很大的优化空间。综合分析Microsoft DeepSpeed的FastPersist、TorchTitan、dlrover的flash checkpoint[3]的方案。主要有如下几种方法:</p>
+<ul>
+<li><p>分布式checkpoint</p>
+<p>分布式训练场景下，模型参数存储在多台机器上。因此可以通过多台机器并行checkpoint的方式提高checkpoint的效率。原生pytorch已经支持。</p>
+</li>
+<li><p>异步checkpoint</p>
+<p>先同步地将checkpoint拷贝到CPU内存中。然后再异步地将CPU内存中的checkpoint存储到持久化存储中。这里checkpoint从GPU内存拷贝到CPU内存的过程仍然是同步的。</p>
+</li>
+<li><p>完全异步checkpoint(pipelined checkpoint write &#x2F; Zero-Overhead Checkpointing)</p>
+<p>FastPersist(pipelined checkpoint write)和TorchTitan(Zero-Overhead Checkpointing)上都提出了完全异步方案。前向计算和反向传播过程中参数的值是不变的，只有在optimizer.step的时候才会更新参数。因此可以新建CUDA流异步地将checkpoint拷贝到pinned memory中。下次optimizer.step更新参数的时候只需保证CUDA流工作完成即可。这样实现了完全异步。</p>
+<p><img src="/images/%E5%BC%B9%E6%80%A7%E8%AE%AD%E7%BB%83/%E6%88%AA%E5%B1%8F2025-05-22%2015.14.18-20250522151421-5r7yui3.png" alt="截屏2025-05-22 15.14.18"></p>
+</li>
+</ul>
+<h3 id="3-1-2-架构"><a href="#3-1-2-架构" class="headerlink" title="3.1.2 架构"></a>3.1.2 架构</h3><p>我们选择了基于dlrover flash checkpoint的方案。架构如图所示，每M轮会同步地将checkpoint保存到共享内存，每N轮会同步地将内存持久化到分布式存储中(N&gt;&gt;M)。在指定<code>--save_at_breakpoint</code>的情况下，如果Worker出现故障导致任务重启，会捕获异常并会将共享内存中的checkpoint同步到永久存储中。因此这意味着最多损失M轮的计算。我们只需要将M设置的足够小，就可以实现尽可能小的</p>
+<p><img src="/images/%E5%BC%B9%E6%80%A7%E8%AE%AD%E7%BB%83/image-20250522165919-vgi7rn1.png" alt="image"></p>
+<p>通过dlrover架构实现了同步直接写内存，异步写永久存储的方案，降低了checkpoint时间44%-97%。然后我们通过pinned memory和CUDA stream异步写的方式，相比于原生dlrover flash checkpoint, checkpiont时间降低了19%-72%。这样就可以大大提高checkpoint的频率了。</p>
+<h3 id="3-1-3-如何进行扩缩容"><a href="#3-1-3-如何进行扩缩容" class="headerlink" title="3.1.3 如何进行扩缩容"></a>3.1.3 如何进行扩缩容</h3><p>本方案并没有脱离基础的load&#x2F;save checkpoint的架构，因此扩缩容方案相对简单，只需要每次启动的时候以不同的<code>WORLD_SIZE</code>​启动即可。但是由于DeepSpeed的参数分布在多个进程中，默认情况下每个进程都会存储自己的模型和优化器分片，因此当<code>WORLD_SIZE</code>​发生变化的时候，需要使用<code>universal checkpoint</code>来解决该问题。</p>
+<p>DeepSpeed架构的扩缩容会引出两个问题:</p>
+<ul>
+<li>默认情况下，DeepSpeed在所有参与的机器上进行模型分片。对于zero 3, 扩容意味着前向计算和反向传播都可能要依赖于机器间的网络，必然会影响整体性能。</li>
+<li>​<code>WORLD_SIZE</code>​发生变化引入的<code>universal checkpoint</code>也会带来性能开线。</li>
+</ul>
+<p>这两个问题可以使用<code>misc</code>​或<code>zero++</code>​的<code>zero_hpz_partition_size</code>进行优化。但考虑到阶段2会解决这些问题，这里就不在详细说明了。</p>
+<h2 id="3-2-阶段2-训练框架层实现动态扩缩容"><a href="#3-2-阶段2-训练框架层实现动态扩缩容" class="headerlink" title="3.2 阶段2: 训练框架层实现动态扩缩容"></a>3.2 阶段2: 训练框架层实现动态扩缩容</h2><h3 id="3-2-1-阶段1的主要问题"><a href="#3-2-1-阶段1的主要问题" class="headerlink" title="3.2.1 阶段1的主要问题"></a>3.2.1 阶段1的主要问题</h3><p>阶段1描述的”极致的Checkpoint优化避免计算损失”方法，有如下问题:</p>
+<ul>
+<li><p>异步checkpoint占用了宝贵的GPU带宽。因此可能影响前向计算、反向传播以及offload等过程的性能。</p>
+</li>
+<li><p>即便更频繁的checkpoint会降低计算损失，任务的启动时间仍然难以极限优化。</p>
+<p>以Qwen3 8B的SFT任务为例，num_procs设置为96的情况，也有超过5分钟的启动时间。对于deepspeed，当发生world size变化后，要有长达10分钟以上的universal checkpoint转换时间。</p>
+</li>
+</ul>
+<p>主要问题在于<code>torchrun</code>​的<code>rendezvous</code>​机制要求在训练之前必须配置好<code>RANK</code>​和<code>WORLD_SIZE</code>等参数来进行分布式训练。那么是否有动态加入的机制来避免该问题呢?</p>
+<h3 id="3-2-2-架构"><a href="#3-2-2-架构" class="headerlink" title="3.2.2 架构"></a>3.2.2 架构</h3><p>正如torchft项目对自己的描述”Easy Per Step Fault Tolerance for PyTorch”那样。torchft实现了一步一容错的方案。</p>
+<p><img src="/images/%E5%BC%B9%E6%80%A7%E8%AE%AD%E7%BB%83/image-20260103162631-0y1onnp.png" alt="image"></p>
+<p>该架构通过<code>Lighthouse</code>​服务实现协调功能。训练任务被划分为多个<code>Replica Group</code>​，每个<code>Replica Group</code>​都维护完整的模型参数。每轮训练开始的时候，每个<code>Replica Group</code>​的<code>Manager</code>​通过<code>qurom</code>​通知<code>Lighthouse</code>​自己参与训练，训练完成后通过<code>shouldCommit</code>​来决定是否更新参数。每个<code>Replica Group</code>​对应一组<code>torchrun</code>​任务，在<code>Replica Group</code>​内部可能进行<code>allreduce</code>​梯度聚集(对于zero, fsdp等模型分片需要该步骤，对于其他不建议使用)，然后在<code>Replica Group</code>​间进行<code>allreduce</code>梯度聚集。</p>
+<h3 id="3-2-3-扩缩容与故障恢复"><a href="#3-2-3-扩缩容与故障恢复" class="headerlink" title="3.2.3 扩缩容与故障恢复"></a>3.2.3 扩缩容与故障恢复</h3><p>当需要对训练任务进行扩容的时候，只需要再启动新的<code>Replica Group</code>​，新的<code>Replica Group</code>​通过<code>quorum</code>​来通知<code>Lighthouse</code>​自己即将加入到训练。当<code>Lighthouse</code>​检查到当前参与者发生变化的时候，会产生新的<code>quorum id</code>​，并通知新的<code>Replica Group</code>​从其他<code>Replica Group</code>​获取最新的<code>Checkpoint</code>，然后加入到训练过程那种</p>
+<p>当训练任务进行缩容的时候，直接关闭部分<code>Replica Group</code>​，保留的<code>Replica Group</code>​会等待短暂的超时时间后，通过<code>Lighthouse</code>协调新的训练参与者组重新开始训练。</p>
+<p>事实上故障的场景与缩容类似。由于这个过程中，<code>Replica Group</code>​的加入和退出都是动态进行的，因此扩缩容甚至包括故障都不会重启任务。只要保证同一时间至少有一个<code>Replica Group</code>，任务就不会中断，因此阶段1中强调的极致的checkpoint时间意义似乎就没那么大了。</p>
+<p>与<code>Lighthouse</code>的通信都是异步的，对性能影响很小。扩容的时候一般不会带来计算损失(或者说最多一步的损失，详见准确性小节)，缩容或故障的时候一般只有一步的损失。</p>
+<p>对于阶段1描述的DeepSpeed的两个问题，我们可以通过把模型分片维护在同一<code>Replica Group</code>下来避免。</p>
+<h2 id="3-3-总结"><a href="#3-3-总结" class="headerlink" title="3.3 总结"></a>3.3 总结</h2><p>基于torchft的动态扩缩容的方案可以实现接近零损失的弹性训练。另外，阶段1使用的dlrover flash checkpoint方案可以作为训练加速的有效补充。</p>
+<h1 id="4-准确性"><a href="#4-准确性" class="headerlink" title="4 准确性"></a>4 准确性</h1><p>弹性训练会根据集群资源的情况动态调整运行worker数量，因此可能会导致global_batch的变化。根据<a href="../%E8%AE%BE%E8%AE%A1/%E9%99%84%E5%BD%95A_%20batch%E5%8F%98%E5%8C%96%E5%AF%B9%E8%AE%AD%E7%BB%83%E7%9A%84%E5%BD%B1%E5%93%8D%E5%88%86%E6%9E%90.md">附录A: batch变化对训练的影响分析</a>，只需用于梯度聚集的<code>global_batch</code>和样本顺序不变，在不考虑精度损失的情况下，就可以保证计算的一致性。</p>
+<h2 id="4-1-batch的保持"><a href="#4-1-batch的保持" class="headerlink" title="4.1 batch的保持"></a>4.1 batch的保持</h2><p>用于梯度聚集的batch有如下公式:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">global_batch = local_batch * acc_steps * world_size</span><br></pre></td></tr></table></figure>
+
+<p>其中，<code>global_batch</code>​是用于梯度聚集的batch。local_batch表示单个Worker单次训练的batch。<code>acc_steps</code>​表示每<code>acc_steps</code>​步训练进行一次梯度聚集。<code>world_size</code>表示工作节点数目。</p>
+<p>需要调整<code>local_batch</code>​，<code>acc_steps</code>​，<code>world_size</code>​的值，来保证<code>global_batch</code>​的不变。考虑到<code>OOM</code>​和<code>Batch Normalization</code>​的影响，<code>local_batch</code>​设置为固定值。而<code>world_size</code>​是根据弹性扩缩容实际调整的值。因此需要通过调整<code>acc_steps</code>​来保证<code>global_batch</code>的不变。</p>
+<p>有的时候难以找到整数的<code>acc_steps</code>​来使<code>global_batch</code>​不变。那么我们可以通过控制<code>world_size</code>​来避免<code>acc_steps</code>​不为整数。因此开发<code>expectec_replicas</code>​的功能，仅能让指定数量的<code>Replica Group</code>参与训练。</p>
+<h2 id="4-2-保证样本顺序"><a href="#4-2-保证样本顺序" class="headerlink" title="4.2 保证样本顺序"></a>4.2 保证样本顺序</h2><p>​<code>DistributedSampler</code>​会根据<code>epoch</code>​和自定义的种子来保证Sampler可恢复。但是无论<code>pytorch</code>​还是<code>transformers</code>​都不支持按照已经训练样本的个数进行恢复训练。因此开发了<code>SkipDistributedSampler</code>​来保证<code>Sample</code>的可恢复性。</p>
+<p>​<code>DistributedSampler</code>​默认实现会根据<code>rank</code>​和<code>num_replicas</code>​来隔项采样分组。这可能导致当<code>replia group</code>​数目不同的时候，样本的顺序不一致。因此开发了<code>DistributedBatchSampler</code>​配合<code>SkipDistributedSampler</code>来保证顺序不变。</p>
+<p><img src="/images/%E5%BC%B9%E6%80%A7%E8%AE%AD%E7%BB%83/image-20260104183308-ig6lphm.png" alt="image"></p>
+<p><img src="/images/%E5%BC%B9%E6%80%A7%E8%AE%AD%E7%BB%83/image-20260104183343-bqcnm9h.png" alt="image"></p>
+<p>上面两张图介绍了样本分配的流程，可以看出无论有几个运行节点，每个local batch的内容是不会发生变化的，而且可以保证global batch内的样本一致。这有利用降低损失精度带来的影响，而且非常便于调试。</p>
+<h2 id="4-3-扩缩容的断点恢复"><a href="#4-3-扩缩容的断点恢复" class="headerlink" title="4.3 扩缩容的断点恢复"></a>4.3 扩缩容的断点恢复</h2><p>阶段1中由于使用了checkpoint的机制。因此只要保证3.1和3.2描述的问题，就可以保证训练一致性。而对于阶段2，torchft上不支持训练的一致性，因为在发生扩缩容的时候可能会丢失样本，问题在于关于样本的分配仍然是静态的。因此开发了基于最新quorum动态调整dataloader的功能，来避免样本的丢失。</p>
+<p><img src="/images/%E5%BC%B9%E6%80%A7%E8%AE%AD%E7%BB%83/image-20260104194137-vciv2jr.png" alt="image"></p>
+<p>这么做的唯一问题是当quorum发生变化的时候，会丢弃当前已经训练的梯度，并对当前样本重新训练。因此会损失一步训练。但考虑到quorum发生变化是低概率事件，损失一部训练并没有太大的影响。</p>
+<h1 id="5-调度框架"><a href="#5-调度框架" class="headerlink" title="5 调度框架"></a>5 调度框架</h1><p>本文使用了volcano框架调度，需要做如下几件事情:</p>
+<ul>
+<li><p>训练框架与调度框架适配。</p>
+<p>通过svc,ssh插件配置的环境变量即可实现在volcano运行。</p>
+</li>
+<li><p>通过抢占和任务资源配置和优先级来实现弹性扩缩容。</p>
+<p>根据配置的<code>minAvailable</code>​和<code>replicas</code>​控制训练任务的运行副本数。当存在空闲资源的时候，处于<code>pending</code>​状态的<code>pod</code>​会被调度，以实现扩容。当资源紧张的时候，通过抢占机制杀死低优先级的<code>pod</code>，以实现缩容。</p>
+</li>
+<li><p>根据3.1的描述，有时候需要调整<code>world_size</code>​来保证<code>acc_steps</code>为整数。</p>
+<p>尽管在训练框架层面可以让多余的工作节点处于等待状态，但这难免浪费很多的资源。因此希望调度框架能够按照指定工作节点数据进行调度，以避免资源浪费。譬如，<code>globa_batch=4</code>​, <code>local_batch=1</code>​，为了保证得到整数的<code>acc_steps</code>​，我们希望工作节点能够按照<code>[1,2,4]</code>​这样调度。如果调度3个节点是没有意义的，为了保证<code>globa_batch</code>的一致，第3个节点不会参与训练，这就做成了资源浪费。</p>
+<p>传统的<code>gang</code>​调度很难慢匹配这样的需求。因此开发了基于<code>sub job tree</code>的调度方式，实现按指定的工作节点进行调度，以避免资源浪费。如下图所示，通过多级sub job调度，将后两个工作节点的调度绑定在一起，就可以出现工作节点数据为3的中间状态，从而避免资源浪费。</p>
+<p><img src="/images/%E5%BC%B9%E6%80%A7%E8%AE%AD%E7%BB%83/image-20260104191730-cevhbet.png" alt="image"></p>
+</li>
+</ul>
+<p>‍</p>
+<h1 id="6-效果"><a href="#6-效果" class="headerlink" title="6 效果"></a>6 效果</h1><h2 id="6-1-计算一致性"><a href="#6-1-计算一致性" class="headerlink" title="6.1 计算一致性"></a>6.1 计算一致性</h2><p>计算一致性是弹性训练的重中之重。在任意工作节点数目下训练都能得到相同的结果，是弹性训练的基本要求。</p>
+<p><strong>阶段1的实验:</strong></p>
+<p>基于DeepSpeed zero 3在Qwen3-8B模型SFT任务做测试，得到如下loss曲线。其中<code>Base</code>​是始终在单机训练的，而<code>Test</code>是使用Flash Checkpint，每100步在1到2台机器上进行切换得到的loss曲线。可以看出弹性扩缩容对训练几乎没有任何影响。</p>
+<p><img src="/images/%E5%BC%B9%E6%80%A7%E8%AE%AD%E7%BB%83/image-20260104192517-efxx0lp.png" alt="image"></p>
+<p>‍</p>
+<p><strong>阶段2的实验:</strong></p>
+<p>基于DeepSpeed zero3在Qwen3-8B模型SFT任务做测试，得到如下loss曲线。其中<code>Base</code>​是始终在单机训练的，而<code>Test</code>则是基于torchft随机对训练任务在到2台机器执行进行切换。可以看出弹性扩缩容对训练几乎没有任何影响。</p>
+<p><img src="/images/%E5%BC%B9%E6%80%A7%E8%AE%AD%E7%BB%83/qwen3_8b_torchft-20260104192953-vypd1h5.png" alt="qwen3_8b_torchft"></p>
+<blockquote>
+<p>注: 该实验没有开启grad norm，所以loss曲线不平滑。但这个更能说明计算的一致性效果很高。</p>
+</blockquote>
+<h2 id="6-2-性能"><a href="#6-2-性能" class="headerlink" title="6.2 性能"></a>6.2 性能</h2><p>阶段1对任务性能不会产生过大的影响，只是会丢失不必要的训练，因此只需要分析阶段2即可。</p>
+<p>先让我们尝试分析一下DeepSpeed zero3 性能测试可能的影响。torchft中manager与ligthouse的通信都是异步的，因此可以忽略。然而通过torchft，我们可以将zero3的前向计算和反向传播过程中的参数收集限定在replica group内，即减少了机器之间的通信量。因此整体上应该会有效果提升。</p>
+<p>​<code>base</code>​为在2机8卡上持续训练。<code>torchft</code>为在2机8卡上通过torchft进行训练。横坐标为步数，纵坐标为单步训练时间。可以看出确实有预期一样有着性能的提升。</p>
+<p><img src="/images/%E5%BC%B9%E6%80%A7%E8%AE%AD%E7%BB%83/time-20260104203243-ae5t8t1.png" alt="time"></p>
+<p>事实上对于性能的影响也是分具体类型的任务的。而本例这种比较也略显不公平。如果不考虑zero3的问题或者通过mics和zero++,性能上应该是接近持平的。</p>
+<h2 id="7-总结"><a href="#7-总结" class="headerlink" title="7 总结"></a>7 总结</h2><p>本文提出的弹性训练解决了如下问题：</p>
+<ul>
+<li><p>可以在”任意”工作节点数目下进行训练，并保持计算的一致性。</p>
+<p>这不仅仅对弹性训练意义重大。对于原来必须以固定节点数据进行训练的任务，也有重大的意义。</p>
+</li>
+<li><p>实现了动态的扩缩容，最多仅有一步的计算损失，并有着良好的性能。</p>
+<p>这个意义不仅限于动态扩缩容，对故障恢复的场景也是意义重大。</p>
+</li>
+</ul>
+<h1 id="附录-相关贡献"><a href="#附录-相关贡献" class="headerlink" title="附录: 相关贡献"></a>附录: 相关贡献</h1><ul>
+<li><p><a target="_blank" rel="noopener" href="https://github.com/deepspeedai/DeepSpeed/pull/7585">https://github.com/deepspeedai/DeepSpeed/pull/7585</a></p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://github.com/deepspeedai/DeepSpeed/pull/7599">https://github.com/deepspeedai/DeepSpeed/pull/7599</a></p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://github.com/deepspeedai/DeepSpeed/pull/7601">https://github.com/deepspeedai/DeepSpeed/pull/7601</a></p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://github.com/deepspeedai/DeepSpeed/pull/7707">https://github.com/deepspeedai/DeepSpeed/pull/7707</a></p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://github.com/deepspeedai/DeepSpeed/pull/7764">https://github.com/deepspeedai/DeepSpeed/pull/7764</a></p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://github.com/huggingface/accelerate/pull/3757">https://github.com/huggingface/accelerate/pull/3757</a></p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://github.com/huggingface/transformers/pull/40640">https://github.com/huggingface/transformers/pull/40640</a></p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://github.com/huggingface/transformers/pull/41144">https://github.com/huggingface/transformers/pull/41144</a></p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://github.com/huggingface/transformers/pull/41159">https://github.com/huggingface/transformers/pull/41159</a></p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://github.com/huggingface/transformers/pull/40790">https://github.com/huggingface/transformers/pull/40790</a></p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://github.com/meta-pytorch/torchft/pull/292">https://github.com/meta-pytorch/torchft/pull/292</a></p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://github.com/meta-pytorch/torchft/pull/303">https://github.com/meta-pytorch/torchft/pull/303</a></p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://github.com/meta-pytorch/torchft/pull/259">https://github.com/meta-pytorch/torchft/pull/259</a></p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://github.com/volcano-sh/volcano/pull/4868">https://github.com/volcano-sh/volcano/pull/4868</a></p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://github.com/volcano-sh/volcano/pull/4872">https://github.com/volcano-sh/volcano/pull/4872</a></p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://github.com/volcano-sh/volcano/pull/4908">https://github.com/volcano-sh/volcano/pull/4908</a></p>
+</li>
+</ul>
+<h2 id="参考文献"><a href="#参考文献" class="headerlink" title="参考文献"></a>参考文献</h2><ul>
+<li><p><a target="_blank" rel="noopener" href="https://arxiv.org/html/2406.13768?_immersive_translate_auto_translate=1">https://arxiv.org/html/2406.13768?_immersive_translate_auto_translate=1</a></p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://discuss.pytorch.org/t/distributed-w-torchtitan-optimizing-checkpointing-efficiency-with-pytorch-dcp/211250">https://discuss.pytorch.org/t/distributed-w-torchtitan-optimizing-checkpointing-efficiency-with-pytorch-dcp/211250</a></p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://github.com/intelligent-machine-learning/dlrover">https://github.com/intelligent-machine-learning/dlrover</a></p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://docs.google.com/presentation/d/1nag6et1hIAw54L6i8oHQpMxfd8w5syXjs94HyGO2Sqo/edit#slide=id.g30df885c6e9_0_125">https://docs.google.com/presentation/d/1nag6et1hIAw54L6i8oHQpMxfd8w5syXjs94HyGO2Sqo/edit#slide=id.g30df885c6e9_0_125</a></p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://docs.google.com/document/u/0/d/1OZsOsz34gRDSxYXiKkj4WqcD9x0lP9TcsfBeu_SsOY4/mobilebasic?tab=t.0&_immersive_translate_auto_translate=1">https://docs.google.com/document/u/0/d/1OZsOsz34gRDSxYXiKkj4WqcD9x0lP9TcsfBeu_SsOY4/mobilebasic?tab=t.0&amp;_immersive_translate_auto_translate=1</a></p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://github.com/pytorch/torchft">https://github.com/pytorch/torchft</a></p>
+</li>
+</ul>
+<p>‍</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://example.com/2026/04/14/%E5%BC%B9%E6%80%A7%E8%AE%AD%E7%BB%83/" data-id="cuid63vfVctyg3ttG3TYrMbgE" data-title="弹性训练" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      
+      
+      
+  <ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/train/" rel="tag">train</a></li></ul>
+
+    </footer>
+  </div>
+  
+</article>
+
+
+
+  
     <article id="post-ErasuceCode算法揭秘" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
   <div class="article-meta">
     <a href="/2025/02/07/ErasuceCode%E7%AE%97%E6%B3%95%E6%8F%AD%E7%A7%98/" class="article-date">
@@ -185,7 +391,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2025/02/07/ErasuceCode%E7%AE%97%E6%B3%95%E6%8F%AD%E7%A7%98/" data-id="cuid5DFj29mQpLC0a7B5fVb3W" data-title="ErasuceCode算法揭秘" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2025/02/07/ErasuceCode%E7%AE%97%E6%B3%95%E6%8F%AD%E7%A7%98/" data-id="cuidiJv00gp4CeOrmcLYMKeZ8" data-title="ErasuceCode算法揭秘" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -296,189 +502,10 @@ if __name__ == &quot;__main__&quot;:
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2025/02/07/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-2-8-%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0%E4%B9%8Bk%E8%BF%91%E9%82%BB%E7%AE%97%E6%B3%95/" data-id="cuid5zV4UwetSFyrDJdnGOIvW" data-title="" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2025/02/07/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-2-8-%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0%E4%B9%8Bk%E8%BF%91%E9%82%BB%E7%AE%97%E6%B3%95/" data-id="cuidL_rFIL8RDXN0lo-oNxpru" data-title="" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
-    </footer>
-  </div>
-  
-</article>
-
-
-
-  
-    <article id="post-RSS-远程Merge的设计EN" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
-  <div class="article-meta">
-    <a href="/2023/12/25/RSS-%E8%BF%9C%E7%A8%8BMerge%E7%9A%84%E8%AE%BE%E8%AE%A1EN/" class="article-date">
-  <time class="dt-published" datetime="2023-12-25T10:58:15.000Z" itemprop="datePublished">2023-12-25</time>
-</a>
-    
-  </div>
-  <div class="article-inner">
-    
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="p-name article-title" href="/2023/12/25/RSS-%E8%BF%9C%E7%A8%8BMerge%E7%9A%84%E8%AE%BE%E8%AE%A1EN/">RSS-Remote Merge Design</a>
-    </h1>
-  
-
-      </header>
-    
-    <div class="e-content article-entry" itemprop="articleBody">
-      
-        <h1 id="1-Default-shuffle"><a href="#1-Default-shuffle" class="headerlink" title="1 Default shuffle"></a>1 Default shuffle</h1><blockquote>
-<p>Note: The first chapter briefly introduces the principle of default shuffle, with the purpose of find where local disks are used, then design remote merge. If you know enough, you can ignore this part.</p>
-</blockquote>
-<p>We will analyze the shuffle of MapReduce, Tez, and Spark in turn.</p>
-<h2 id="1-1-MapReduce"><a href="#1-1-MapReduce" class="headerlink" title="1.1 MapReduce"></a>1.1 MapReduce</h2><p>Map writes the record to the memory. When the memory exceeds the threshold, the memory data is spilled to the disk file, and the Record is written to the disk file in order of partitionid+key. After Map has processed all records, it will spill the data currently in memory to a disk file. Then read all the files spilled to the disk and merge them in the order of partitionid+key to get the sorted Records.</p>
-<blockquote>
-<p>Note: The purpose of sorting according to partitionid is that when the Reduce side obtains the data from the Map side, it should be read as sequentially as possible. For MR, Tez, and Spark, regardless of whether they are sorted or not, as long as there are partitioned, they need to be sorted according to partitionid.</p>
-</blockquote>
-<p>The reduce will pull the records of the corresponding partition remotely or locally from the Map, which is called MapOutput. Under normal circumstances, the memory will be used directly. If the memory exceeds the threshold, these records will be written to the disk. Then the reduce will perform merge operations on MapOutputs using minimum heap K-way merge sorting to obtain globally sorted records. During the Merge process, temporary results may be spilled to disk because the memory exceeds the threshold. In addition, if there are too many files spilled to disk, additional merges will be triggered.</p>
-<h2 id="1-2-Tez"><a href="#1-2-Tez" class="headerlink" title="1.2 Tez"></a>1.2 Tez</h2><p>There are two cases of tez: (1) ordered io  (2) unordered io.</p>
-<p>Ordered io is the same as MapReduce and so ignore it here.</p>
-<p>Unordered io is generally used in hashjoin and other situations where keys are not required for sorting. Non-sorted io adopts a ready-to-use solution. Map writes the Record directly to the file or writes it to the file through cache. The Reduce side can also read and use it when reading data.</p>
-<h2 id="1-3-Spark"><a href="#1-3-Spark" class="headerlink" title="1.3 Spark"></a>1.3 Spark</h2><p>Spark’s shuffle is more complex and more reasonable. Some tasks do not require sort and combine, so spark users can determine the shuffle logic according to their needs.</p>
-<h3 id="1-3-1-Shuffle-write-operation"><a href="#1-3-1-Shuffle-write-operation" class="headerlink" title="1.3.1 Shuffle write operation"></a>1.3.1 Shuffle write operation</h3><p>When writing shuffle data, three writers are supported:</p>
-<ul>
-<li>(1) BypassMergeSortShuffleWriter</li>
-</ul>
-<p>A temporary file is generated for each partition. When writing record, find the corresponding partition and write it directly to the corresponding temporary file. Then when all data is processed, these temporary files are written to a final file in order of the partitions, and the temporary files are deleted.</p>
-<ul>
-<li>(2) UnsafeShuffleWriter</li>
-</ul>
-<p>UnsafeShuffleWriter mainly implements specific logic through ShuffleExternalSorter. When writing a Record, the serialization operation is performed directly and the serialized bytes are copied to the requested memory. At the same time, the address and partition of the record will also be recorded into the memory (inMemSorter).</p>
-<p>When the memory reaches the threshold, spill operation will be performed. Based on the information in memory (inMemSorter), we can easily get a Record sorted by partition and write it to a file.</p>
-<p>When all Records are processed, we will spill the records currently in memory into the file. Finally, all spilled files are aggregated once. Since the previously spilled files have been sorted according to the partition, we can copy the corresponding copies of all the spilled files to the final file in the order of the partitions. The final file obtained in this way is the partition-sorted file.</p>
-<ul>
-<li>(3) SortShuffleWriter</li>
-</ul>
-<p>SortShuffleWriter mainly implements specific logic through ExternalSorter. ExternalSorter decides whether to combine and sort based on the user’s needs.</p>
-<p>When writing record, it will be inserted directly into memory. If combine is required, the memory architecture is map, otherwise it is buffer.</p>
-<p>If the current evaluation memory is greater than the threshold, the spill operation will be triggered. During the spill operation, the Record will be spilled to the disk. This process requires sorting. The specific comparator will use different values according to different user needs. If keyordering is set, it will be sorted by key. If keyordering is not set, but aggregator (i.e. combine) is set, the keys are sorted according to  the hashcode of key, thus ensuring that the same keys are organized together to facilitate combine operations. If neither keyordering nor aggregator is set, it will be sorted according to partition.</p>
-<p>When all Records are written, the spill files need to be read and merged into a globally ordered file.<br>​<br>Comparison of three writers</p>
-<table>
-<thead>
-<tr>
-<th>writer</th>
-<th>advantages</th>
-<th>disadvantages</th>
-<th>scene</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>BypassMergeSortShuffleWriter</td>
-<td>(1) Only serialized once. <br>(2) Using hashmap-like data structure, inserting data is fast.</td>
-<td>(1) Combine and sort are not supported <br>(2) Each partition must generate a temporary file, which will generate too many temporary files.</td>
-<td>Suitable for situations where the number of partitions is small (default is less than or equal to 200) and there is no combine.</td>
-</tr>
-<tr>
-<td>UnsafeShuffleWriter</td>
-<td>(1) Only serialized once. <br>(2) The number of files spilled to disk is limited and is no longer based on the number of partitions, and can support larger partitions.</td>
-<td>(1) Combine, sort is not supported <br>(2) The writing order Record order will be disrupted, and supportsRelocationOfSerializedObjects is required.</td>
-<td>Applicable to situations where combine does not exist, and supportsRelocationOfSerializedObjects is true, and the maximum number of supported partitions is 16777216.</td>
-</tr>
-<tr>
-<td>SortShuffleWriter</td>
-<td>(1) Supports combine, sort <br> (2) Suitable for all scenarios <br> (3) The number of files spilled to disk is limited</td>
-<td>(1) Multiple serializations are required</td>
-<td>Suitable for all scenarios.</td>
-</tr>
-</tbody></table>
-<h3 id="1-3-2-shuffle-read"><a href="#1-3-2-shuffle-read" class="headerlink" title="1.3.2 shuffle read"></a>1.3.2 shuffle read</h3><p>Currently there is only one implementation of BlockStoreShuffleReader. The implementation is similar to MapReduce.<br>The reduce will pull the records of the corresponding partition remotely or locally from the map. Under normal circumstances, it will be written directly to the memory, but if the block size to be obtained exceeds the threshold, will use disk.<br>Then it will be decided according to the user’s needs whether to combine or sort, and finally form a record iterator required by the user.<br>Combine and sort use ExternalAppendOnlyMap and ExternalSorter respectively. When the memory exceeds the threshold, the data will be spilled to the local disk.</p>
-<h2 id="1-4-Summary"><a href="#1-4-Summary" class="headerlink" title="1.4 Summary"></a>1.4 Summary</h2><p>(1) About the semantics of each framework</p>
-<p>For MapReduce and the ordered io of Tez, it is a special case of spark sorting. For Tez’s unordered io, it is essentially a special case of spark’s non-sorting. In essence, the semantics of each framework are the same, and spark is more general.</p>
-<p>(2) Where will generate local disk files?</p>
-<p>After analyzing the three computing frameworks, we learned that the following processes will use disks:</p>
-<ul>
-<li>(1) Map may generate intermediate temporary files because the memory exceeds the threshold.</li>
-<li>(2) The map will eventually generate disk files to provide shuffle services.</li>
-<li>(3) When reduce pulls records, disk files may be generated because the threshold is exceeded.</li>
-<li>(4) When merging on the reduce side, temporary disk files may be generated for global sorting.</li>
-</ul>
-<p>In fact, uniffle has solved (1), (2). For (3), if the parameters are adjusted effectively, it is difficult to generate disk files. In fact, only (4) needs to be discussed in this article.</p>
-<h1 id="2-Plans"><a href="#2-Plans" class="headerlink" title="2 Plans"></a>2 Plans</h1><p>In order to solve the problem that Merge on the Reduce side may spill to disk, there are two main solutions:</p>
-<ul>
-<li>(1) Merge on Shuffle Server</li>
-<li>(2) Reduce side Merge on demand</li>
-</ul>
-<h2 id="2-1-Option-1-Merge-on-ShuffleServer"><a href="#2-1-Option-1-Merge-on-ShuffleServer" class="headerlink" title="2.1 Option 1: Merge on ShuffleServer"></a>2.1 Option 1: Merge on ShuffleServer</h2><p>Move the merge process of reduce to the ShuffleServer side. ShuffleServer will merge the locally sorted Records sent from the map side into a globally sorted records sequence. The reduce side reads directly in the order of the records sequence.</p>
-<ul>
-<li>Advantages: Does not require too much memory and network RPC.</li>
-<li>Disadvantages: Shuffle Server needs to parse Key, Value and Comparator. The Shuffle side cannot combine.</li>
-</ul>
-<h2 id="2-2-Option-2-On-demand-Merge-on-the-Reduce-side"><a href="#2-2-Option-2-On-demand-Merge-on-the-Reduce-side" class="headerlink" title="2.2 Option 2: On-demand Merge on the Reduce side"></a>2.2 Option 2: On-demand Merge on the Reduce side</h2><img src="/images/rss/on_demand_merge.png" width=50% height=50% text-align=center/>
-Since the memory on the reduce side is limited, in order to avoid spilling data to disk when merging on the reduce side. When reduce obtains segment, it can only read part of the buffer of each segment, and then merge all the buffers. Then when the partial buffer reading of a certain segment is completed, the next buffer of this segment will continue to be read, and this buffer will continue to be added to the merge process.
-There is a problem with this. The number of times the Reduce side reads data from ShuffleServer is approximately segments_num * (segment_size / buffer_size), which is a large value for large tasks. Too many RPCs means decreased performance.
-
-<blockquote>
-<p>The segment here refers to the sorted record collection, which can be understood as the block in which the records have been sorted according to key.</p>
-</blockquote>
-<ul>
-<li>Advantages: Shuffle Server does not need to do anything extra.</li>
-<li>Disadvantages: Too many RPCs.</li>
-</ul>
-<p>**This article chooses option 1, and the following content mainly discusses option 1. **</p>
-<h1 id="3-Demand-analysis"><a href="#3-Demand-analysis" class="headerlink" title="3 Demand analysis"></a>3 Demand analysis</h1><h2 id="3-1-What-types-of-tasks-require-remote-merge"><a href="#3-1-What-types-of-tasks-require-remote-merge" class="headerlink" title="3.1 What types of tasks require remote merge?"></a>3.1 What types of tasks require remote merge?</h2><p>Currently, uniffle’s map-side no longer spill disk. This article mainly considers the situation on the reduce. Mainly divided into the following situations:</p>
-<ul>
-<li>(1) For spark’s non-sorted, non-aggregated, tez unordered io. It does not require any global aggregation and sorting operations, and only requires very little memory. The current version of uniffle will not use disk if related settings are reasonable. Just use the current uniffle solution. This article will not discuss this aspect.</li>
-<li>(2) For spark sorting or aggregation tasks, tez ordered io, mapreduce, due to the need for global sorting or aggregation, the memory may not be enough, and the record may be spilled to the disk. This article mainly discusses this situation.<br>**In summary, it can be seen that remote merge is only used for shuffles that require sorting or aggregation. **</li>
-</ul>
-<h2 id="3-2-How-does-ShuffleServer-sort"><a href="#3-2-How-does-ShuffleServer-sort" class="headerlink" title="3.2 How does ShuffleServer sort?"></a>3.2 How does ShuffleServer sort?</h2><p>For sorting, map is generally sorted to obtain a set of partially sorted records, which is called segment here. Then reduce will obtain all segments and merge them. Spark, MR, and Tez all use minimum heap K-way merge sorting. This method can still be used for remote sorting.</p>
-<p>BufferManager and FlushManager maintain block information in memory and disk. We only need to add MergeManager to ShuffleServer and merge the blocks under the same Shuffle to obtain globally sorted Records.</p>
-<p>Introducing sorting on the ShuffleServer produces a side effect: the Shuffle’s KeyClass, ValueClass and KeyComparator need to be passed to ShuffleServer.</p>
-<h2 id="3-3-How-does-ShuffleServer-combine"><a href="#3-3-How-does-ShuffleServer-combine" class="headerlink" title="3.3 How does ShuffleServer combine?"></a>3.3 How does ShuffleServer combine?</h2><p>Combine is generally a user-defined operation, so ShuffleServer is prohibited from performing combine operations. If combine is performed on the Reduce side, wouldn’t it violate our theme of avoiding spill to disk on the task side? In fact we don’t have to use ExternalAppendOnlyMap for combine. If the Records obtained from ShuffleServer are sorted by key, it means that the same keys have been organized together, and only a small amount of memory is needed to combine.</p>
-<h2 id="3-4-How-does-Writer-write"><a href="#3-4-How-does-Writer-write" class="headerlink" title="3.4 How does Writer write?"></a>3.4 How does Writer write?</h2><p>Just write it the way we have it.</p>
-<h2 id="3-5-How-does-Reader-read"><a href="#3-5-How-does-Reader-read" class="headerlink" title="3.5 How does Reader read?"></a>3.5 How does Reader read?</h2><p>Currently, Uniffle’s shuffle reader uses blockid as the read mark, which makes it easy to verify whether an accurate and complete records are obtained. For remote merge, MergeManager has merged the original Block collection into a new sequence sorted records by key. Therefore, the blockid generated by the map segment cannot be used:<br>We will use a new way to read Records. When MergerManager performs global Merge, an index will be generated. Reader will read according to this index.</p>
-<blockquote>
-<p>Note: In principle, using key as a read index is more semantic, and the first version of the demo program was also implemented by this way. However, this proposal was not friendly enough to deal with the problem of data skew, so  gave up the plan.</p>
-</blockquote>
-<h1 id="4-Scheme-Design"><a href="#4-Scheme-Design" class="headerlink" title="4 Scheme Design"></a>4 Scheme Design</h1><h2 id="4-1-Basic-procedures-for-RemoteMerge"><a href="#4-1-Basic-procedures-for-RemoteMerge" class="headerlink" title="4.1 Basic procedures for RemoteMerge"></a>4.1 Basic procedures for RemoteMerge</h2><img src="/images/rss/remote_merge_structure.png" width=50% height=50% text-align=center/>
-
-<p>The following introduces the process of Remote Merge:</p>
-<ul>
-<li>(1) Register<br>When AM&#x2F;Driver calls the registerShuffle method, it will additionally register keyClass, valueClass and keyComparator. This information is mainly used by ShuffleServer to parse and sort the Record during merging.</li>
-<li>(2) sendShuffleData<br>The sendShuffleData logic is basically consistent with existing RSS tasks. The only difference is the use of unified serializers and deserializers, which ensures that ShuffleServer can parse the Record normally no matter which framework it is.</li>
-<li>(3) buffer and flush<br>The shuffle server will store the data in the cache, or cache it to the local file system or remote file system through the flush manager. The logic of the original ShuffleServer is still reused here.</li>
-<li>(4) reportUniqueBlocks<br>A new API is provided, reportUniqueBlocks. The Reduce end will deduplicate the blocks generated by the map, and then send the valid block set to ShuffleServer through reportUniqueBlocks. After ShuffleServer receives a valid blocks collection, it will trigger Remote Merge. The results of Remote Merge will be written to the bufferPool like a normal block, and may be flushed to disk when necessary. The result generated by RemoteMerge is an ordinary block, but for convenience of explanation, it is called merged block here. The merged block records the results sorted by key, so when reading the merged block, you need to read it in ascending order in the order of blockid.</li>
-<li>(5) getSortedShuffleData<br>Reduce will read merged blocks in the order of block serial numbers, and then choose when to use them for reduce calculations based on certain conditions.</li>
-</ul>
-<h2 id="4-2-Analyze-the-process-from-the-perspective-of-Record"><a href="#4-2-Analyze-the-process-from-the-perspective-of-Record" class="headerlink" title="4.2 Analyze the process from the perspective of Record"></a>4.2 Analyze the process from the perspective of Record</h2><p>We can use WordCount as an example to explain the flow of record in the entire process. In this example, there are two partitions and one reduce, that is, one reduce processes the data of two partitions.</p>
-<img src="/images/rss/remote_merge_from_record_perspective.jpg" width=50% height=50% text-align=center/>
-
-<ul>
-<li>(1) MAP side<br>After the document data is processed on the map side, it will be sorted. For Map1, since there are two partitions, records with odd numbers as keys will be written to block101, and records with even numbers as keys will be written to block102. The same goes for Map2. Note that the Records in the block here are all sorted.</li>
-<li>(2) Map side sends data<br>The map side sends the block to ShuffleServer through sendShuffleData, and ShuffleServer stores it in the bufferPool.<br>What I mean here is that when registering, the app named APP1 will also be registered, and the app named APP1@RemoteMerge will also be registered, which will be introduced later.</li>
-<li>(3) ShuffleServer side Merge<br>After reduce is started, reportUniqueBlocks will be called to report the available block set, and the corresponding partition in ShuffleServer will be triggered to merge. The result of Merge is a globally sorted record collection under this partition.<br>Then the question is where are the results of merge stored? The merge process occurs in memory. Whenever a certain number of records are merged, the results are written to a new block. In order to distinguish it from the original appid, this group of blocks will be managed in an appid ending with “@RemoteMerge”. The blockid of this new group of blocks increases from 1 and is sorted globally. That is, the records inside each block are sorted, and the records with blockid&#x3D;1 must be less than or equal to the records with blockid&#x3D;2.</li>
-<li>(4) Reduce end reading<br>According to the previous analysis, the reduce side only needs to read the block managed by the appid ending with “@RemoteMerge”. When reduce reads a block, it starts from the block with blockid&#x3D;1 and reads in the order of blockid. We know that when reduce performs calculations, it is calculated in order. Since the data we obtain on the ShuffleServer side is already sorted, we only need to obtain a small amount of data from the ShuffleServer side each time. This enables on-demand reading from the ShuffleServer side, which greatly reduces memory usage.<br>There are two special situations here, detailed in 5.5.​</li>
-</ul>
-<h1 id="5-Plan"><a href="#5-Plan" class="headerlink" title="5 Plan"></a>5 Plan</h1><h2 id="5-1-Unified-serializer"><a href="#5-1-Unified-serializer" class="headerlink" title="5.1 Unified serializer"></a>5.1 Unified serializer</h2><p>Since Merge needs to be performed on the ShuffleServer side, a unified serializer that is independent of the computing framework needs to be extracted. Two types of serializers are extracted here: (1) Writable (2) Kryo. Writable serialization is used for classes that handle the org.apache.hadoop.io.Writable interface, used in the MR and TEZ frameworks. Kryo can serialize most classes and is generally used in the Spark framework.</p>
-<h2 id="5-2-RecordsFileWriter-RecordFileReader"><a href="#5-2-RecordsFileWriter-RecordFileReader" class="headerlink" title="5.2 RecordsFileWriter&#x2F;RecordFileReader"></a>5.2 RecordsFileWriter&#x2F;RecordFileReader</h2><p>Provides abstract methods for processing Records</p>
-<h2 id="5-3-Merger"><a href="#5-3-Merger" class="headerlink" title="5.3 Merger"></a>5.3 Merger</h2><p>Provides basic Merger service to merge multiple data streams according to key. Minimum heap K-way merge sorting is used to merge and sort the data streams that have been partially sorted.</p>
-<h2 id="5-4-MergeManager"><a href="#5-4-MergeManager" class="headerlink" title="5.4 MergeManager"></a>5.4 MergeManager</h2><p>Used to merge Records on the server side.</p>
-<h2 id="5-5-Tools-for-reading-sorted-data"><a href="#5-5-Tools-for-reading-sorted-data" class="headerlink" title="5.5 Tools for reading sorted data"></a>5.5 Tools for reading sorted data</h2><p>Generally speaking, when the Reduce side reads data, it can be sent directly to downstream calculations. But there are two special situations:<br>(1) For situations where it is necessary to combine in Merge, we need to wait for all the same keys to arrive before combining, and then send them to the downstream.<br>(2) For spark and tez, the reduce end can read data from multiple partitions. Therefore, we need to merge the data of multiple partitions again on the reduce side, and then send it to the downstream.<br>RMRecordsReader is a tool for reading sorted data. The general structure is as follows:<br><img src="/images/rss/rm_records_reader.png" width=50% height=50% text-align=center/><br>The figure depicts a situation where a single Reduce processes two partitions. The RecordsFetcher thread will read the block of the corresponding partition and then parse it into Records. Then send it to combineBuffers. RecordCombiner reads Records from combineBuffer. When all records of a certain key are collected, a combine operation is performed. The result will be sent to mergedBuffer. RecordMerge will obtain all mergedBuffers and then merge and sort them again in memory. Finally, the global sorting results are obtained for downstream.</p>
-<h2 id="5-6-Framework-adaptation"><a href="#5-6-Framework-adaptation" class="headerlink" title="5.6 Framework adaptation"></a>5.6 Framework adaptation</h2><p>Compatible with MR, Tez, and Spark architectures.</p>
-<blockquote>
-<p>I has used online application to conduct large-scale stress testing on MR and Tez. Spark has currently only tested some basic examples and still needs a lot of testing.</p>
-</blockquote>
-<h2 id="5-7-Isolated-classloader"><a href="#5-7-Isolated-classloader" class="headerlink" title="5.7 Isolated classloader"></a>5.7 Isolated classloader</h2><p>For different versions of keyclass, valueclass and comparatorclass, use isolated classloaders to load them.</p>
-<blockquote>
-<p>Chinese version document: <a target="_blank" rel="noopener" href="https://zhengchenyu.github.io/2023/12/25/RSS-%E8%BF%9C%E7%A8%8BMerge%E7%9A%84%E8%AE%BE%E8%AE%A1/">https://zhengchenyu.github.io/2023/12/25/RSS-%E8%BF%9C%E7%A8%8BMerge%E7%9A%84%E8%AE%BE%E8%AE%A1/</a></p>
-</blockquote>
-
-      
-    </div>
-    <footer class="article-footer">
-      <a data-url="http://example.com/2023/12/25/RSS-%E8%BF%9C%E7%A8%8BMerge%E7%9A%84%E8%AE%BE%E8%AE%A1EN/" data-id="cuidw-SriAesP7L5rq8ZzV61k" data-title="RSS-Remote Merge Design" class="article-share-link"><span class="fa fa-share">Share</span></a>
-      
-      
-      
-  <ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/RSS/" rel="tag">RSS</a></li></ul>
-
     </footer>
   </div>
   
@@ -654,7 +681,186 @@ There is a problem with this. The number of times the Reduce side reads data fro
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2023/12/25/RSS-%E8%BF%9C%E7%A8%8BMerge%E7%9A%84%E8%AE%BE%E8%AE%A1/" data-id="cuidB6bYtGb39ynJ2p0_fULc5" data-title="RSS-远程Merge的设计" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2023/12/25/RSS-%E8%BF%9C%E7%A8%8BMerge%E7%9A%84%E8%AE%BE%E8%AE%A1/" data-id="cuidBgcDqRY-a40BcawJfv80Q" data-title="RSS-远程Merge的设计" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      
+      
+      
+  <ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/RSS/" rel="tag">RSS</a></li></ul>
+
+    </footer>
+  </div>
+  
+</article>
+
+
+
+  
+    <article id="post-RSS-远程Merge的设计EN" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
+  <div class="article-meta">
+    <a href="/2023/12/25/RSS-%E8%BF%9C%E7%A8%8BMerge%E7%9A%84%E8%AE%BE%E8%AE%A1EN/" class="article-date">
+  <time class="dt-published" datetime="2023-12-25T10:58:15.000Z" itemprop="datePublished">2023-12-25</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="p-name article-title" href="/2023/12/25/RSS-%E8%BF%9C%E7%A8%8BMerge%E7%9A%84%E8%AE%BE%E8%AE%A1EN/">RSS-Remote Merge Design</a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="e-content article-entry" itemprop="articleBody">
+      
+        <h1 id="1-Default-shuffle"><a href="#1-Default-shuffle" class="headerlink" title="1 Default shuffle"></a>1 Default shuffle</h1><blockquote>
+<p>Note: The first chapter briefly introduces the principle of default shuffle, with the purpose of find where local disks are used, then design remote merge. If you know enough, you can ignore this part.</p>
+</blockquote>
+<p>We will analyze the shuffle of MapReduce, Tez, and Spark in turn.</p>
+<h2 id="1-1-MapReduce"><a href="#1-1-MapReduce" class="headerlink" title="1.1 MapReduce"></a>1.1 MapReduce</h2><p>Map writes the record to the memory. When the memory exceeds the threshold, the memory data is spilled to the disk file, and the Record is written to the disk file in order of partitionid+key. After Map has processed all records, it will spill the data currently in memory to a disk file. Then read all the files spilled to the disk and merge them in the order of partitionid+key to get the sorted Records.</p>
+<blockquote>
+<p>Note: The purpose of sorting according to partitionid is that when the Reduce side obtains the data from the Map side, it should be read as sequentially as possible. For MR, Tez, and Spark, regardless of whether they are sorted or not, as long as there are partitioned, they need to be sorted according to partitionid.</p>
+</blockquote>
+<p>The reduce will pull the records of the corresponding partition remotely or locally from the Map, which is called MapOutput. Under normal circumstances, the memory will be used directly. If the memory exceeds the threshold, these records will be written to the disk. Then the reduce will perform merge operations on MapOutputs using minimum heap K-way merge sorting to obtain globally sorted records. During the Merge process, temporary results may be spilled to disk because the memory exceeds the threshold. In addition, if there are too many files spilled to disk, additional merges will be triggered.</p>
+<h2 id="1-2-Tez"><a href="#1-2-Tez" class="headerlink" title="1.2 Tez"></a>1.2 Tez</h2><p>There are two cases of tez: (1) ordered io  (2) unordered io.</p>
+<p>Ordered io is the same as MapReduce and so ignore it here.</p>
+<p>Unordered io is generally used in hashjoin and other situations where keys are not required for sorting. Non-sorted io adopts a ready-to-use solution. Map writes the Record directly to the file or writes it to the file through cache. The Reduce side can also read and use it when reading data.</p>
+<h2 id="1-3-Spark"><a href="#1-3-Spark" class="headerlink" title="1.3 Spark"></a>1.3 Spark</h2><p>Spark’s shuffle is more complex and more reasonable. Some tasks do not require sort and combine, so spark users can determine the shuffle logic according to their needs.</p>
+<h3 id="1-3-1-Shuffle-write-operation"><a href="#1-3-1-Shuffle-write-operation" class="headerlink" title="1.3.1 Shuffle write operation"></a>1.3.1 Shuffle write operation</h3><p>When writing shuffle data, three writers are supported:</p>
+<ul>
+<li>(1) BypassMergeSortShuffleWriter</li>
+</ul>
+<p>A temporary file is generated for each partition. When writing record, find the corresponding partition and write it directly to the corresponding temporary file. Then when all data is processed, these temporary files are written to a final file in order of the partitions, and the temporary files are deleted.</p>
+<ul>
+<li>(2) UnsafeShuffleWriter</li>
+</ul>
+<p>UnsafeShuffleWriter mainly implements specific logic through ShuffleExternalSorter. When writing a Record, the serialization operation is performed directly and the serialized bytes are copied to the requested memory. At the same time, the address and partition of the record will also be recorded into the memory (inMemSorter).</p>
+<p>When the memory reaches the threshold, spill operation will be performed. Based on the information in memory (inMemSorter), we can easily get a Record sorted by partition and write it to a file.</p>
+<p>When all Records are processed, we will spill the records currently in memory into the file. Finally, all spilled files are aggregated once. Since the previously spilled files have been sorted according to the partition, we can copy the corresponding copies of all the spilled files to the final file in the order of the partitions. The final file obtained in this way is the partition-sorted file.</p>
+<ul>
+<li>(3) SortShuffleWriter</li>
+</ul>
+<p>SortShuffleWriter mainly implements specific logic through ExternalSorter. ExternalSorter decides whether to combine and sort based on the user’s needs.</p>
+<p>When writing record, it will be inserted directly into memory. If combine is required, the memory architecture is map, otherwise it is buffer.</p>
+<p>If the current evaluation memory is greater than the threshold, the spill operation will be triggered. During the spill operation, the Record will be spilled to the disk. This process requires sorting. The specific comparator will use different values according to different user needs. If keyordering is set, it will be sorted by key. If keyordering is not set, but aggregator (i.e. combine) is set, the keys are sorted according to  the hashcode of key, thus ensuring that the same keys are organized together to facilitate combine operations. If neither keyordering nor aggregator is set, it will be sorted according to partition.</p>
+<p>When all Records are written, the spill files need to be read and merged into a globally ordered file.<br>​<br>Comparison of three writers</p>
+<table>
+<thead>
+<tr>
+<th>writer</th>
+<th>advantages</th>
+<th>disadvantages</th>
+<th>scene</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>BypassMergeSortShuffleWriter</td>
+<td>(1) Only serialized once. <br>(2) Using hashmap-like data structure, inserting data is fast.</td>
+<td>(1) Combine and sort are not supported <br>(2) Each partition must generate a temporary file, which will generate too many temporary files.</td>
+<td>Suitable for situations where the number of partitions is small (default is less than or equal to 200) and there is no combine.</td>
+</tr>
+<tr>
+<td>UnsafeShuffleWriter</td>
+<td>(1) Only serialized once. <br>(2) The number of files spilled to disk is limited and is no longer based on the number of partitions, and can support larger partitions.</td>
+<td>(1) Combine, sort is not supported <br>(2) The writing order Record order will be disrupted, and supportsRelocationOfSerializedObjects is required.</td>
+<td>Applicable to situations where combine does not exist, and supportsRelocationOfSerializedObjects is true, and the maximum number of supported partitions is 16777216.</td>
+</tr>
+<tr>
+<td>SortShuffleWriter</td>
+<td>(1) Supports combine, sort <br> (2) Suitable for all scenarios <br> (3) The number of files spilled to disk is limited</td>
+<td>(1) Multiple serializations are required</td>
+<td>Suitable for all scenarios.</td>
+</tr>
+</tbody></table>
+<h3 id="1-3-2-shuffle-read"><a href="#1-3-2-shuffle-read" class="headerlink" title="1.3.2 shuffle read"></a>1.3.2 shuffle read</h3><p>Currently there is only one implementation of BlockStoreShuffleReader. The implementation is similar to MapReduce.<br>The reduce will pull the records of the corresponding partition remotely or locally from the map. Under normal circumstances, it will be written directly to the memory, but if the block size to be obtained exceeds the threshold, will use disk.<br>Then it will be decided according to the user’s needs whether to combine or sort, and finally form a record iterator required by the user.<br>Combine and sort use ExternalAppendOnlyMap and ExternalSorter respectively. When the memory exceeds the threshold, the data will be spilled to the local disk.</p>
+<h2 id="1-4-Summary"><a href="#1-4-Summary" class="headerlink" title="1.4 Summary"></a>1.4 Summary</h2><p>(1) About the semantics of each framework</p>
+<p>For MapReduce and the ordered io of Tez, it is a special case of spark sorting. For Tez’s unordered io, it is essentially a special case of spark’s non-sorting. In essence, the semantics of each framework are the same, and spark is more general.</p>
+<p>(2) Where will generate local disk files?</p>
+<p>After analyzing the three computing frameworks, we learned that the following processes will use disks:</p>
+<ul>
+<li>(1) Map may generate intermediate temporary files because the memory exceeds the threshold.</li>
+<li>(2) The map will eventually generate disk files to provide shuffle services.</li>
+<li>(3) When reduce pulls records, disk files may be generated because the threshold is exceeded.</li>
+<li>(4) When merging on the reduce side, temporary disk files may be generated for global sorting.</li>
+</ul>
+<p>In fact, uniffle has solved (1), (2). For (3), if the parameters are adjusted effectively, it is difficult to generate disk files. In fact, only (4) needs to be discussed in this article.</p>
+<h1 id="2-Plans"><a href="#2-Plans" class="headerlink" title="2 Plans"></a>2 Plans</h1><p>In order to solve the problem that Merge on the Reduce side may spill to disk, there are two main solutions:</p>
+<ul>
+<li>(1) Merge on Shuffle Server</li>
+<li>(2) Reduce side Merge on demand</li>
+</ul>
+<h2 id="2-1-Option-1-Merge-on-ShuffleServer"><a href="#2-1-Option-1-Merge-on-ShuffleServer" class="headerlink" title="2.1 Option 1: Merge on ShuffleServer"></a>2.1 Option 1: Merge on ShuffleServer</h2><p>Move the merge process of reduce to the ShuffleServer side. ShuffleServer will merge the locally sorted Records sent from the map side into a globally sorted records sequence. The reduce side reads directly in the order of the records sequence.</p>
+<ul>
+<li>Advantages: Does not require too much memory and network RPC.</li>
+<li>Disadvantages: Shuffle Server needs to parse Key, Value and Comparator. The Shuffle side cannot combine.</li>
+</ul>
+<h2 id="2-2-Option-2-On-demand-Merge-on-the-Reduce-side"><a href="#2-2-Option-2-On-demand-Merge-on-the-Reduce-side" class="headerlink" title="2.2 Option 2: On-demand Merge on the Reduce side"></a>2.2 Option 2: On-demand Merge on the Reduce side</h2><img src="/images/rss/on_demand_merge.png" width=50% height=50% text-align=center/>
+Since the memory on the reduce side is limited, in order to avoid spilling data to disk when merging on the reduce side. When reduce obtains segment, it can only read part of the buffer of each segment, and then merge all the buffers. Then when the partial buffer reading of a certain segment is completed, the next buffer of this segment will continue to be read, and this buffer will continue to be added to the merge process.
+There is a problem with this. The number of times the Reduce side reads data from ShuffleServer is approximately segments_num * (segment_size / buffer_size), which is a large value for large tasks. Too many RPCs means decreased performance.
+
+<blockquote>
+<p>The segment here refers to the sorted record collection, which can be understood as the block in which the records have been sorted according to key.</p>
+</blockquote>
+<ul>
+<li>Advantages: Shuffle Server does not need to do anything extra.</li>
+<li>Disadvantages: Too many RPCs.</li>
+</ul>
+<p>**This article chooses option 1, and the following content mainly discusses option 1. **</p>
+<h1 id="3-Demand-analysis"><a href="#3-Demand-analysis" class="headerlink" title="3 Demand analysis"></a>3 Demand analysis</h1><h2 id="3-1-What-types-of-tasks-require-remote-merge"><a href="#3-1-What-types-of-tasks-require-remote-merge" class="headerlink" title="3.1 What types of tasks require remote merge?"></a>3.1 What types of tasks require remote merge?</h2><p>Currently, uniffle’s map-side no longer spill disk. This article mainly considers the situation on the reduce. Mainly divided into the following situations:</p>
+<ul>
+<li>(1) For spark’s non-sorted, non-aggregated, tez unordered io. It does not require any global aggregation and sorting operations, and only requires very little memory. The current version of uniffle will not use disk if related settings are reasonable. Just use the current uniffle solution. This article will not discuss this aspect.</li>
+<li>(2) For spark sorting or aggregation tasks, tez ordered io, mapreduce, due to the need for global sorting or aggregation, the memory may not be enough, and the record may be spilled to the disk. This article mainly discusses this situation.<br>**In summary, it can be seen that remote merge is only used for shuffles that require sorting or aggregation. **</li>
+</ul>
+<h2 id="3-2-How-does-ShuffleServer-sort"><a href="#3-2-How-does-ShuffleServer-sort" class="headerlink" title="3.2 How does ShuffleServer sort?"></a>3.2 How does ShuffleServer sort?</h2><p>For sorting, map is generally sorted to obtain a set of partially sorted records, which is called segment here. Then reduce will obtain all segments and merge them. Spark, MR, and Tez all use minimum heap K-way merge sorting. This method can still be used for remote sorting.</p>
+<p>BufferManager and FlushManager maintain block information in memory and disk. We only need to add MergeManager to ShuffleServer and merge the blocks under the same Shuffle to obtain globally sorted Records.</p>
+<p>Introducing sorting on the ShuffleServer produces a side effect: the Shuffle’s KeyClass, ValueClass and KeyComparator need to be passed to ShuffleServer.</p>
+<h2 id="3-3-How-does-ShuffleServer-combine"><a href="#3-3-How-does-ShuffleServer-combine" class="headerlink" title="3.3 How does ShuffleServer combine?"></a>3.3 How does ShuffleServer combine?</h2><p>Combine is generally a user-defined operation, so ShuffleServer is prohibited from performing combine operations. If combine is performed on the Reduce side, wouldn’t it violate our theme of avoiding spill to disk on the task side? In fact we don’t have to use ExternalAppendOnlyMap for combine. If the Records obtained from ShuffleServer are sorted by key, it means that the same keys have been organized together, and only a small amount of memory is needed to combine.</p>
+<h2 id="3-4-How-does-Writer-write"><a href="#3-4-How-does-Writer-write" class="headerlink" title="3.4 How does Writer write?"></a>3.4 How does Writer write?</h2><p>Just write it the way we have it.</p>
+<h2 id="3-5-How-does-Reader-read"><a href="#3-5-How-does-Reader-read" class="headerlink" title="3.5 How does Reader read?"></a>3.5 How does Reader read?</h2><p>Currently, Uniffle’s shuffle reader uses blockid as the read mark, which makes it easy to verify whether an accurate and complete records are obtained. For remote merge, MergeManager has merged the original Block collection into a new sequence sorted records by key. Therefore, the blockid generated by the map segment cannot be used:<br>We will use a new way to read Records. When MergerManager performs global Merge, an index will be generated. Reader will read according to this index.</p>
+<blockquote>
+<p>Note: In principle, using key as a read index is more semantic, and the first version of the demo program was also implemented by this way. However, this proposal was not friendly enough to deal with the problem of data skew, so  gave up the plan.</p>
+</blockquote>
+<h1 id="4-Scheme-Design"><a href="#4-Scheme-Design" class="headerlink" title="4 Scheme Design"></a>4 Scheme Design</h1><h2 id="4-1-Basic-procedures-for-RemoteMerge"><a href="#4-1-Basic-procedures-for-RemoteMerge" class="headerlink" title="4.1 Basic procedures for RemoteMerge"></a>4.1 Basic procedures for RemoteMerge</h2><img src="/images/rss/remote_merge_structure.png" width=50% height=50% text-align=center/>
+
+<p>The following introduces the process of Remote Merge:</p>
+<ul>
+<li>(1) Register<br>When AM&#x2F;Driver calls the registerShuffle method, it will additionally register keyClass, valueClass and keyComparator. This information is mainly used by ShuffleServer to parse and sort the Record during merging.</li>
+<li>(2) sendShuffleData<br>The sendShuffleData logic is basically consistent with existing RSS tasks. The only difference is the use of unified serializers and deserializers, which ensures that ShuffleServer can parse the Record normally no matter which framework it is.</li>
+<li>(3) buffer and flush<br>The shuffle server will store the data in the cache, or cache it to the local file system or remote file system through the flush manager. The logic of the original ShuffleServer is still reused here.</li>
+<li>(4) reportUniqueBlocks<br>A new API is provided, reportUniqueBlocks. The Reduce end will deduplicate the blocks generated by the map, and then send the valid block set to ShuffleServer through reportUniqueBlocks. After ShuffleServer receives a valid blocks collection, it will trigger Remote Merge. The results of Remote Merge will be written to the bufferPool like a normal block, and may be flushed to disk when necessary. The result generated by RemoteMerge is an ordinary block, but for convenience of explanation, it is called merged block here. The merged block records the results sorted by key, so when reading the merged block, you need to read it in ascending order in the order of blockid.</li>
+<li>(5) getSortedShuffleData<br>Reduce will read merged blocks in the order of block serial numbers, and then choose when to use them for reduce calculations based on certain conditions.</li>
+</ul>
+<h2 id="4-2-Analyze-the-process-from-the-perspective-of-Record"><a href="#4-2-Analyze-the-process-from-the-perspective-of-Record" class="headerlink" title="4.2 Analyze the process from the perspective of Record"></a>4.2 Analyze the process from the perspective of Record</h2><p>We can use WordCount as an example to explain the flow of record in the entire process. In this example, there are two partitions and one reduce, that is, one reduce processes the data of two partitions.</p>
+<img src="/images/rss/remote_merge_from_record_perspective.jpg" width=50% height=50% text-align=center/>
+
+<ul>
+<li>(1) MAP side<br>After the document data is processed on the map side, it will be sorted. For Map1, since there are two partitions, records with odd numbers as keys will be written to block101, and records with even numbers as keys will be written to block102. The same goes for Map2. Note that the Records in the block here are all sorted.</li>
+<li>(2) Map side sends data<br>The map side sends the block to ShuffleServer through sendShuffleData, and ShuffleServer stores it in the bufferPool.<br>What I mean here is that when registering, the app named APP1 will also be registered, and the app named APP1@RemoteMerge will also be registered, which will be introduced later.</li>
+<li>(3) ShuffleServer side Merge<br>After reduce is started, reportUniqueBlocks will be called to report the available block set, and the corresponding partition in ShuffleServer will be triggered to merge. The result of Merge is a globally sorted record collection under this partition.<br>Then the question is where are the results of merge stored? The merge process occurs in memory. Whenever a certain number of records are merged, the results are written to a new block. In order to distinguish it from the original appid, this group of blocks will be managed in an appid ending with “@RemoteMerge”. The blockid of this new group of blocks increases from 1 and is sorted globally. That is, the records inside each block are sorted, and the records with blockid&#x3D;1 must be less than or equal to the records with blockid&#x3D;2.</li>
+<li>(4) Reduce end reading<br>According to the previous analysis, the reduce side only needs to read the block managed by the appid ending with “@RemoteMerge”. When reduce reads a block, it starts from the block with blockid&#x3D;1 and reads in the order of blockid. We know that when reduce performs calculations, it is calculated in order. Since the data we obtain on the ShuffleServer side is already sorted, we only need to obtain a small amount of data from the ShuffleServer side each time. This enables on-demand reading from the ShuffleServer side, which greatly reduces memory usage.<br>There are two special situations here, detailed in 5.5.​</li>
+</ul>
+<h1 id="5-Plan"><a href="#5-Plan" class="headerlink" title="5 Plan"></a>5 Plan</h1><h2 id="5-1-Unified-serializer"><a href="#5-1-Unified-serializer" class="headerlink" title="5.1 Unified serializer"></a>5.1 Unified serializer</h2><p>Since Merge needs to be performed on the ShuffleServer side, a unified serializer that is independent of the computing framework needs to be extracted. Two types of serializers are extracted here: (1) Writable (2) Kryo. Writable serialization is used for classes that handle the org.apache.hadoop.io.Writable interface, used in the MR and TEZ frameworks. Kryo can serialize most classes and is generally used in the Spark framework.</p>
+<h2 id="5-2-RecordsFileWriter-RecordFileReader"><a href="#5-2-RecordsFileWriter-RecordFileReader" class="headerlink" title="5.2 RecordsFileWriter&#x2F;RecordFileReader"></a>5.2 RecordsFileWriter&#x2F;RecordFileReader</h2><p>Provides abstract methods for processing Records</p>
+<h2 id="5-3-Merger"><a href="#5-3-Merger" class="headerlink" title="5.3 Merger"></a>5.3 Merger</h2><p>Provides basic Merger service to merge multiple data streams according to key. Minimum heap K-way merge sorting is used to merge and sort the data streams that have been partially sorted.</p>
+<h2 id="5-4-MergeManager"><a href="#5-4-MergeManager" class="headerlink" title="5.4 MergeManager"></a>5.4 MergeManager</h2><p>Used to merge Records on the server side.</p>
+<h2 id="5-5-Tools-for-reading-sorted-data"><a href="#5-5-Tools-for-reading-sorted-data" class="headerlink" title="5.5 Tools for reading sorted data"></a>5.5 Tools for reading sorted data</h2><p>Generally speaking, when the Reduce side reads data, it can be sent directly to downstream calculations. But there are two special situations:<br>(1) For situations where it is necessary to combine in Merge, we need to wait for all the same keys to arrive before combining, and then send them to the downstream.<br>(2) For spark and tez, the reduce end can read data from multiple partitions. Therefore, we need to merge the data of multiple partitions again on the reduce side, and then send it to the downstream.<br>RMRecordsReader is a tool for reading sorted data. The general structure is as follows:<br><img src="/images/rss/rm_records_reader.png" width=50% height=50% text-align=center/><br>The figure depicts a situation where a single Reduce processes two partitions. The RecordsFetcher thread will read the block of the corresponding partition and then parse it into Records. Then send it to combineBuffers. RecordCombiner reads Records from combineBuffer. When all records of a certain key are collected, a combine operation is performed. The result will be sent to mergedBuffer. RecordMerge will obtain all mergedBuffers and then merge and sort them again in memory. Finally, the global sorting results are obtained for downstream.</p>
+<h2 id="5-6-Framework-adaptation"><a href="#5-6-Framework-adaptation" class="headerlink" title="5.6 Framework adaptation"></a>5.6 Framework adaptation</h2><p>Compatible with MR, Tez, and Spark architectures.</p>
+<blockquote>
+<p>I has used online application to conduct large-scale stress testing on MR and Tez. Spark has currently only tested some basic examples and still needs a lot of testing.</p>
+</blockquote>
+<h2 id="5-7-Isolated-classloader"><a href="#5-7-Isolated-classloader" class="headerlink" title="5.7 Isolated classloader"></a>5.7 Isolated classloader</h2><p>For different versions of keyclass, valueclass and comparatorclass, use isolated classloaders to load them.</p>
+<blockquote>
+<p>Chinese version document: <a target="_blank" rel="noopener" href="https://zhengchenyu.github.io/2023/12/25/RSS-%E8%BF%9C%E7%A8%8BMerge%E7%9A%84%E8%AE%BE%E8%AE%A1/">https://zhengchenyu.github.io/2023/12/25/RSS-%E8%BF%9C%E7%A8%8BMerge%E7%9A%84%E8%AE%BE%E8%AE%A1/</a></p>
+</blockquote>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://example.com/2023/12/25/RSS-%E8%BF%9C%E7%A8%8BMerge%E7%9A%84%E8%AE%BE%E8%AE%A1EN/" data-id="cuidxuDB3TM9kAJuK0thzvEo3" data-title="RSS-Remote Merge Design" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -770,7 +976,7 @@ $$\Sigma U = {\Lambda ^2}{U^T}$$
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2017/10/22/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-3-2-%E9%9D%9E%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0%E4%B9%8B%E4%B8%BB%E6%88%90%E5%88%86%E5%88%86%E6%9E%90/" data-id="cuido2djXMarcFNCc_cgqM9Rd" data-title="机器学习-3.2-非监督学习之主成分分析.md" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2017/10/22/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-3-2-%E9%9D%9E%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0%E4%B9%8B%E4%B8%BB%E6%88%90%E5%88%86%E5%88%86%E6%9E%90/" data-id="cuid-iW5DZPGb9hWv-EBf81Di" data-title="机器学习-3.2-非监督学习之主成分分析.md" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -953,7 +1159,7 @@ $$\ell (\theta ) = \sum\limits _{i = 1}^m {\sum\limits _{j = 1}^k {{Q _i}({z^{(i
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2017/09/24/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-3-1-%E9%9D%9E%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0%E4%B9%8B%E8%81%9A%E7%B1%BB/" data-id="cuid6ak90iuYAtFAEozz34kp4" data-title="机器学习-3.1-非监督学习之聚类.md" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2017/09/24/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-3-1-%E9%9D%9E%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0%E4%B9%8B%E8%81%9A%E7%B1%BB/" data-id="cuidU-JLwZhZXnYMoWbSrwTCb" data-title="机器学习-3.1-非监督学习之聚类.md" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -1346,7 +1552,7 @@ $$k(x,z) = \exp ( - \frac{{||x - z|{|^2}}}{{2{\sigma ^2}}})$$
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2017/09/08/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-2-7-%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0%E4%B9%8B%E6%94%AF%E6%8C%81%E5%90%91%E9%87%8F%E6%9C%BA/" data-id="cuid0VPHfxIkG9SgpTmqFqMC4" data-title="机器学习-2.7-监督学习之支持向量机" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2017/09/08/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-2-7-%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0%E4%B9%8B%E6%94%AF%E6%8C%81%E5%90%91%E9%87%8F%E6%9C%BA/" data-id="cuidX6G-StSPJBiCV1M-US07-" data-title="机器学习-2.7-监督学习之支持向量机" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -1513,7 +1719,7 @@ $${\phi _{i = k|y = 0}} = \frac{{\sum\limits _{i = 1}^m {\sum\limits _{j = 1}^n 
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2017/08/05/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-2-6-%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0%E4%B9%8B%E6%9C%B4%E7%B4%A0%E8%B4%9D%E5%8F%B6%E6%96%AF%E7%AE%97%E6%B3%95/" data-id="cuidA38mMUnHENxa9qdWCkAXi" data-title="机器学习-2.6-监督学习之朴素贝叶斯算法" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2017/08/05/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-2-6-%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0%E4%B9%8B%E6%9C%B4%E7%B4%A0%E8%B4%9D%E5%8F%B6%E6%96%AF%E7%AE%97%E6%B3%95/" data-id="cuidSjpif424CqHjhg10x5KiF" data-title="机器学习-2.6-监督学习之朴素贝叶斯算法" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -1690,236 +1896,7 @@ $${\nabla _{A^T}}trAB{A^T}C = CAB + {C^T}A{B^T}$$
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2017/08/05/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-2-5-%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0%E4%B9%8B%E7%94%9F%E6%88%90%E5%9E%8B%E5%AD%A6%E4%B9%A0%E7%AE%97%E6%B3%95/" data-id="cuidqZzYn9fM8v7ytFIxzxL25" data-title="机器学习-2.5-监督学习之生成型学习算法" class="article-share-link"><span class="fa fa-share">Share</span></a>
-      
-      
-      
-  <ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/" rel="tag">机器学习</a></li></ul>
-
-    </footer>
-  </div>
-  
-</article>
-
-
-
-  
-    <article id="post-机器学习-2-4-监督学习之softmax" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
-  <div class="article-meta">
-    <a href="/2017/07/24/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-2-4-%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0%E4%B9%8Bsoftmax/" class="article-date">
-  <time class="dt-published" datetime="2017-07-24T10:35:50.000Z" itemprop="datePublished">2017-07-24</time>
-</a>
-    
-  </div>
-  <div class="article-inner">
-    
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="p-name article-title" href="/2017/07/24/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-2-4-%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0%E4%B9%8Bsoftmax/">机器学习-2.4-监督学习之softmax</a>
-    </h1>
-  
-
-      </header>
-    
-    <div class="e-content article-entry" itemprop="articleBody">
-      
-        <script type="text/javascript" src="/Users/zcy/Desktop/study/git/MathJax-master/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-
-<h1 id="Softmax-Regression"><a href="#Softmax-Regression" class="headerlink" title="Softmax Regression"></a>Softmax Regression</h1><p>下面介绍一下指数族分布的另外一个例子。之前的逻辑回归中，可以用来解决二分类的问题。对于有k中可能结果的时候，问题就转化为多分类问题了，也就是接下来要说明的softmax regression问题。<br>s</p>
-<h2 id="1-函数定义"><a href="#1-函数定义" class="headerlink" title="1 函数定义"></a>1 函数定义</h2><p>在进行下一步推导前，我们先定义部分辅助函数。我们这里事先定义一个k-1维向量\(T(y)\)，这里具体对应于指数族分布的\(T(y)\),具体定义如下:</p>
-
-$$T(1) = \left[ \begin{gathered}
-  1 \hfill \\\
-  0 \hfill \\\
-  0 \hfill \\\
-  ... \hfill \\\
-  0 \hfill \\ 
-\end{gathered}  \right],T(2) = \left[ \begin{gathered}
-  0 \hfill \\\
-  1 \hfill \\\
-  0 \hfill \\\
-  ... \hfill \\\
-  0 \hfill \\ 
-\end{gathered}  \right],T(3) = \left[ \begin{gathered}
-  0 \hfill \\\
-  0 \hfill \\\
-  1 \hfill \\\
-  ... \hfill \\\
-  0 \hfill \\\ 
-\end{gathered}  \right],...,T(k - 1) = \left[ \begin{gathered}
-  0 \hfill \\\
-  0 \hfill \\\
-  0 \hfill \\\
-  ... \hfill \\\
-  1 \hfill \\ 
-\end{gathered}  \right],T(k) = \left[ \begin{gathered}
-  0 \hfill \\\
-  0 \hfill \\\
-  0 \hfill \\\
-  ... \hfill \\\
-  0 \hfill \\ 
-\end{gathered}  \right]$$
-
-
-<p>我们定义\(T(y) _1\)表示的\(T(y)\)第一个元素，其他依次类推。</p>
-<p>然后再引入一个函数，具体定义如下:</p>
-
-$$1\{ true\} = 1$$
-$$1\{ false\} = 0$$
-
-<blockquote>
-<p>可以通过带入值的方式验证上式。</p>
-</blockquote>
-<h2 id="2模型推导"><a href="#2模型推导" class="headerlink" title="2	模型推导"></a>2	模型推导</h2><p>在softmax中,我们知道\(y \in \{ 1,2,…,k\}\)。我们设置\(y&#x3D;1\)的概率为\(\phi _1\),<br>类似的有\(y&#x3D;k\)的概率为\(\phi _k\)，并且我们轻易得到如下公式：</p>
-
-$$\sum\limits _{i = 1}^k {\phi _i}  = 1$$
-$${\phi _k} = \sum\limits _{i = 1}^{k - 1}{\phi _i}$$
-
-
-<p>由于我们已经知道\(p(y &#x3D; i) &#x3D; {\phi _i}\)，综上可以得到:</p>
-
-$$p(y) = \phi _1^{1\{ y = 1\} }\phi _2^{1\{ y = 2\} }...\phi _k^{1\{ y = k\} } = \phi _1^{1\{ y = 1\} }\phi _2^{1\{ y = 2\} }...\phi _k^{1 - \sum\limits _{i = 1}^{k - 1} {1\{ y = i\} } } = \phi _1^{T{(y)} _1}\phi _2^{T{{(y)} _2}}...\phi _k^{1 - \sum\limits _{i = 1}^{k - 1} {T{(y)} _i} }$$
-$$p(y) = \exp (T{(y) _1}\ln {\phi _1} + T{(y) _2}\ln {\phi _2} + ... + (1 - \sum\limits _{i = 1}^{k - 1} {T{{(y)} _i}} )\ln {\phi _k})$$
-$$p(y) = \exp (T{(y) _1}\ln \frac{\phi _1}{\phi _k} + T{(y) _2}\ln \frac{\phi _2}{\phi _k} + ... + T{(y) _{k - 1}}\ln \frac{\phi _{k - 1}}{\phi _k} + \ln {\phi _k})$$
-
-
-<p>我们对照指数族分布，其中\(T(y)\)我们已经定义，可以得到其他参数如下:</p>
-
-$$b(y) = 1$$
-$$a(\eta ) =  - \ln {\phi _k}$$
-$$\eta  = \left[ \begin{gathered}
-  \ln \frac{\phi _1}{\phi _k} \hfill \\\
-  \ln \frac{\phi _2}{\phi _k} \hfill \\\
-  ... \hfill \\\
-  \ln \frac{\phi _{k - 1}}{\phi _k} \hfill \\\ 
-\end{gathered}  \right]$$
-
-
-<p>我们用\(\eta\)来表示\(\phi\)，目标是将我们的问题归整为一个变量的问题，从而更容易计算。对上面向量拆开计算得到:</p>
-
-$${\eta _i} = \ln \frac{\phi _i}{\phi _k}$$
-
-
-<p>继而可以转化为:</p>
-
-$${\eta _i} = \ln \frac{\phi _i}{\phi _k}$$
-
-
-<p>又由于我们已知\(\sum\limits _{j &#x3D; 1}^k {\phi _j}  &#x3D; 1\)，所以有:</p>
-
-$$\sum\limits _{i = 1}^k {e^{\eta _i}{\phi _k}}  = 1$$
-
-
-<p>继而有:</p>
-
-$${\phi _k} = \frac{1}{\sum\limits _{j = 1}^k {e^{\eta _j}}}$$
-
-
-<p>最后我们可以得到:</p>
-
-$${\phi _i} = \frac{e^{\eta _i}}{\sum\limits _{j = 1}^k {e^{\eta _j}}}$$
-
-
-<p>由于指数组分布假设是关于输入的线性函数，所以得到在已知\(x\)和\(\theta\)的情况下\(y&#x3D;i\)的概率的公式，如下：</p>
-
-$$p(y = i|x,\theta ) = {\phi _i} = \frac{e^{\eta _i}}{\sum\limits _{j = 1}^k {e^{\eta _j}}} = \frac{e^{\theta _i^Tx}}{\sum\limits _{j = 1}^k {e^{\theta _j^Tx}}}$$
-
-
-<p>这里我们可以得到\({h_\theta }(x)\),如下:</p>
-
-$${h_\theta }(x) = E[T(y)|x,\theta ] = E[\left( \begin{gathered}
-  1\{ y = 1\}  \hfill \\\
-  1\{ y = 2\}  \hfill \\\
-  ... \hfill \\\
-  1\{ y = k - 1\}  \hfill \\\ 
-\end{gathered}  \right)|x,\theta ]$$
-
-$${h_ \theta }(x) = E[\left( \begin{gathered}
-  {\phi _1} \hfill \\\
-  {\phi _2} \hfill \\\
-  ... \hfill \\\
-  {\phi _{k - 1}} \hfill \\\ 
-\end{gathered}  \right)|x,\theta ] = \left( \begin{gathered}
-  \frac{e^{\theta _1^Tx}}{\sum\limits _{j = 1}^k {e^{\theta  _j^Tx}}} \hfill \\\
-  \frac{e^{\theta _2^Tx}}{\sum\limits _{j = 1}^k {e^{\theta _j^Tx}}} \hfill \\\
-  ... \hfill \\\
-  \frac{e^{\theta _{k - 1}^Tx}}{\sum\limits _{j = 1}^k {e^{\theta _j^Tx}}} \hfill \\\
-\end{gathered}  \right)$$
-
-
-<blockquote>
-<p>其中,\(k\)为取值的可能集合的大小，\(\theta\)为一个\(k*n\)的矩阵。</p>
-</blockquote>
-<p>到这里我们可以定义我们的损失函数了，如下:</p>
-
-$$J(x) = \frac{1}{2}\sum\limits _{i = 1}^m {{(T(y) - {h _\theta }(x))}^2}$$
-
-
-<p>上式是一个向量，我们可以对这个向量继续求平方和，来衡量准确度，如下：</p>
-
-$$J(x) = \frac{1}{2}\sum\limits _{i = 1}^m {|{{(T(y) - {h _\theta }(x))}^2}|}$$
-
-
-<p>损失函数已经定义完成，我们就有了算法的截止条件了。接下来就是找到算法的最优迭代方向，也就是计算其偏导数了。</p>
-<p>我们使用最大释然性来计算迭代方向。建模的原则是：对于一个已知\(y&#x3D;i\)的样本\((x,y)\)，我们需要找到一个方向去迭代\(\theta\)，使得\(\phi _i\)尽可能大，使得其他\(\phi\)尽可能小。当然由于所有\(\phi\)之和为1,所以我们只需要保证\(\phi _i\)尽可能大即可。因此,在已经的\(m\)个样本的情况下，我们只需要保证下面的式子最大:</p>
-
-$$\sum\limits _{i = 1}^m {p(y = {y^i}|x,\theta )}  = \sum\limits _{i = 1}^m {\prod\limits _{l = 1}^k {p{(y = l|x,\theta )}^{1\{ {y^i} = l\}}} }$$
-
-
-<p>取自然对数后，我们定义最大似然函数:</p>
-
-$$l(\theta ) = \sum\limits _{i = 1}^m {\ln \prod\limits _{l = 1}^k {(\frac{e^{\theta _l^Tx}}{\sum\limits _{j = 1}^k {e^{\theta _j^Tx}}})^{1\{{y^i} = l\}}}}$$
-
-
-<p>当且仅当\({y^i} &#x3D; l\)的时候, \(^{1{y^i&#x3D;l\} &#x3D; 1})。其他值为0，我们可以将连乘转化，如下：</p>
-
-$$l(\theta ) = \sum\limits _{i = 1}^m {\ln (\frac{e^{\theta _{y^i}^Tx}}{\sum\limits _{j = 1}^k {e^{\theta _j^Tx}}})}  = \sum\limits _{i = 1}^m {\ln [\theta _{y^i}^Tx - \ln \sum\limits _{j = 1}^k {e^{\theta _j^Tx}}]} $$
-
-
-<p>然后对其求偏导数,对\(y _i&#x3D;f\)的时候后有：</p>
-
-$$\frac{\partial l(\theta )}{\partial {\theta _f}} = \sum\limits _{i = 1}^m {\ln [{x _f} - \frac{e^{\theta _f^Tx}{x _f}}{\sum\limits _{j = 1}^k {e^{\theta _j^Tx}}}]}$$
-
-
-<p>对\({y_i} \ne f\)的时候，有：</p>
-
-$$\frac{\partial l(\theta )}{\partial {\theta _f}} = \sum\limits _{i = 1}^m {\ln [0 - \frac{e^{\theta _f^Tx}{x _f}}{\sum\limits _{j = 1}^k {e^{\theta _j^Tx}}}]}$$
-
-
-<p>综上，可以得到:</p>
-
-$$\frac{\partial l(\theta )}{\partial {\theta _f}} = \sum\limits _{i = 1}^m {\ln [1\{ {y^i} = f\}  - \frac{e^{\theta _f^Tx}}{\sum\limits _{j = 1}^k {e^{\theta _j^Tx}}}]{x _f}}  = \sum\limits _{i = 1}^m {\ln [1\{{y^i} = f\}  - {\phi _f}]{x _f}}$$
-
-
-<blockquote>
-<p>\(x _f\)是一个向量，因为公式一次迭代更新一个维度下的一组\(\theta\)。事实上，这里是一个向量求微分。如果我们对的某个元素\(\theta\)进行微分，我们依然能够得到这个公式。</p>
-</blockquote>
-<h2 id="3-实际问题的解决"><a href="#3-实际问题的解决" class="headerlink" title="3 实际问题的解决"></a>3 实际问题的解决</h2><p>我们随机制造一组数据，在\(2*2\)的空间内使用直线\({x _2} &#x3D; 0.5*{x _1}\)和直线\({x _2} &#x3D; -0.5*{x _1}+2\)具体的分类如下:</p>
-<img src="/images/机器学习/监督学习-softmax样本.png" width=50% height=50% text-align=center/>
-
-<p>根据之前的推导，编写如下代码:</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> random</span><br><span class="line"><span class="keyword">import</span> math</span><br><span class="line"><span class="keyword">import</span> numpy <span class="keyword">as</span> np</span><br><span class="line"><span class="keyword">from</span> matplotlib <span class="keyword">import</span> pyplot <span class="keyword">as</span> plt</span><br><span class="line"><span class="keyword">from</span> matplotlib.lines <span class="keyword">import</span> Line2D</span><br><span class="line"></span><br><span class="line">g_x_arr=[[<span class="number">1</span>, <span class="number">0.035</span>, <span class="number">1.344</span>], [<span class="number">1</span>, <span class="number">0.662</span>, <span class="number">0.598</span>], [<span class="number">1</span>, <span class="number">1.791</span>, <span class="number">1.889</span>], [<span class="number">1</span>, <span class="number">0.158</span>, <span class="number">0.12</span>], [<span class="number">1</span>, <span class="number">1.55</span>, <span class="number">1.835</span>], [<span class="number">1</span>, <span class="number">2.0</span>, <span class="number">0.613</span>], [<span class="number">1</span>, <span class="number">1.176</span>, <span class="number">0.368</span>], [<span class="number">1</span>, <span class="number">0.564</span>, <span class="number">0.043</span>], [<span class="number">1</span>, <span class="number">1.559</span>, <span class="number">1.507</span>], [<span class="number">1</span>, <span class="number">1.998</span>, <span class="number">0.988</span>], [<span class="number">1</span>, <span class="number">0.082</span>, <span class="number">0.941</span>], [<span class="number">1</span>, <span class="number">0.542</span>, <span class="number">1.371</span>], [<span class="number">1</span>, <span class="number">0.542</span>, <span class="number">0.671</span>], [<span class="number">1</span>, <span class="number">1.34</span>, <span class="number">1.856</span>], [<span class="number">1</span>, <span class="number">0.049</span>, <span class="number">0.089</span>], [<span class="number">1</span>, <span class="number">1.933</span>, <span class="number">0.871</span>], [<span class="number">1</span>, <span class="number">1.753</span>, <span class="number">1.024</span>], [<span class="number">1</span>, <span class="number">0.315</span>, <span class="number">1.341</span>], [<span class="number">1</span>, <span class="number">0.829</span>, <span class="number">1.26</span>], [<span class="number">1</span>, <span class="number">0.686</span>, <span class="number">1.721</span>], [<span class="number">1</span>, <span class="number">1.222</span>, <span class="number">1.129</span>], [<span class="number">1</span>, <span class="number">0.55</span>, <span class="number">0.075</span>], [<span class="number">1</span>, <span class="number">0.767</span>, <span class="number">0.346</span>], [<span class="number">1</span>, <span class="number">1.516</span>, <span class="number">1.752</span>], [<span class="number">1</span>, <span class="number">1.347</span>, <span class="number">0.905</span>], [<span class="number">1</span>, <span class="number">0.127</span>, <span class="number">0.782</span>], [<span class="number">1</span>, <span class="number">1.169</span>, <span class="number">1.272</span>], [<span class="number">1</span>, <span class="number">1.301</span>, <span class="number">0.273</span>], [<span class="number">1</span>, <span class="number">0.081</span>, <span class="number">0.739</span>], [<span class="number">1</span>, <span class="number">0.203</span>, <span class="number">0.658</span>], [<span class="number">1</span>, <span class="number">0.347</span>, <span class="number">1.064</span>], [<span class="number">1</span>, <span class="number">0.793</span>, <span class="number">1.193</span>], [<span class="number">1</span>, <span class="number">1.428</span>, <span class="number">0.326</span>], [<span class="number">1</span>, <span class="number">0.509</span>, <span class="number">0.983</span>], [<span class="number">1</span>, <span class="number">0.12</span>, <span class="number">0.884</span>], [<span class="number">1</span>, <span class="number">0.251</span>, <span class="number">0.282</span>], [<span class="number">1</span>, <span class="number">0.73</span>, <span class="number">0.445</span>], [<span class="number">1</span>, <span class="number">1.889</span>, <span class="number">1.323</span>], [<span class="number">1</span>, <span class="number">1.314</span>, <span class="number">1.795</span>], [<span class="number">1</span>, <span class="number">1.297</span>, <span class="number">1.467</span>], [<span class="number">1</span>, <span class="number">1.669</span>, <span class="number">0.613</span>], [<span class="number">1</span>, <span class="number">0.753</span>, <span class="number">0.114</span>], [<span class="number">1</span>, <span class="number">0.94</span>, <span class="number">1.972</span>], [<span class="number">1</span>, <span class="number">0.738</span>, <span class="number">1.603</span>], [<span class="number">1</span>, <span class="number">1.508</span>, <span class="number">1.237</span>], [<span class="number">1</span>, <span class="number">0.979</span>, <span class="number">0.572</span>], [<span class="number">1</span>, <span class="number">0.128</span>, <span class="number">1.254</span>], [<span class="number">1</span>, <span class="number">0.569</span>, <span class="number">0.155</span>], [<span class="number">1</span>, <span class="number">0.88</span>, <span class="number">0.211</span>], [<span class="number">1</span>, <span class="number">0.405</span>, <span class="number">0.603</span>], [<span class="number">1</span>, <span class="number">1.02</span>, <span class="number">1.9</span>], [<span class="number">1</span>, <span class="number">0.438</span>, <span class="number">1.535</span>], [<span class="number">1</span>, <span class="number">1.506</span>, <span class="number">1.638</span>], [<span class="number">1</span>, <span class="number">1.712</span>, <span class="number">0.394</span>], [<span class="number">1</span>, <span class="number">0.556</span>, <span class="number">0.124</span>], [<span class="number">1</span>, <span class="number">0.444</span>, <span class="number">0.115</span>], [<span class="number">1</span>, <span class="number">0.595</span>, <span class="number">1.009</span>], [<span class="number">1</span>, <span class="number">0.165</span>, <span class="number">0.089</span>], [<span class="number">1</span>, <span class="number">1.57</span>, <span class="number">0.634</span>], [<span class="number">1</span>, <span class="number">1.429</span>, <span class="number">1.181</span>], [<span class="number">1</span>, <span class="number">0.8</span>, <span class="number">0.671</span>], [<span class="number">1</span>, <span class="number">1.914</span>, <span class="number">1.091</span>], [<span class="number">1</span>, <span class="number">0.594</span>, <span class="number">0.569</span>], [<span class="number">1</span>, <span class="number">0.935</span>, <span class="number">0.277</span>], [<span class="number">1</span>, <span class="number">0.47</span>, <span class="number">0.522</span>], [<span class="number">1</span>, <span class="number">0.94</span>, <span class="number">1.924</span>], [<span class="number">1</span>, <span class="number">0.194</span>, <span class="number">1.933</span>], [<span class="number">1</span>, <span class="number">0.612</span>, <span class="number">0.613</span>], [<span class="number">1</span>, <span class="number">0.236</span>, <span class="number">0.894</span>], [<span class="number">1</span>, <span class="number">1.888</span>, <span class="number">0.251</span>], [<span class="number">1</span>, <span class="number">1.548</span>, <span class="number">0.191</span>], [<span class="number">1</span>, <span class="number">1.543</span>, <span class="number">0.603</span>], [<span class="number">1</span>, <span class="number">1.521</span>, <span class="number">0.02</span>], [<span class="number">1</span>, <span class="number">0.923</span>, <span class="number">0.856</span>], [<span class="number">1</span>, <span class="number">0.649</span>, <span class="number">1.31</span>], [<span class="number">1</span>, <span class="number">0.379</span>, <span class="number">1.746</span>], [<span class="number">1</span>, <span class="number">1.345</span>, <span class="number">0.902</span>], [<span class="number">1</span>, <span class="number">0.937</span>, <span class="number">0.524</span>], [<span class="number">1</span>, <span class="number">1.018</span>, <span class="number">0.68</span>], [<span class="number">1</span>, <span class="number">1.738</span>, <span class="number">1.623</span>], [<span class="number">1</span>, <span class="number">1.534</span>, <span class="number">1.9</span>], [<span class="number">1</span>, <span class="number">0.139</span>, <span class="number">1.911</span>], [<span class="number">1</span>, <span class="number">1.508</span>, <span class="number">1.173</span>], [<span class="number">1</span>, <span class="number">0.798</span>, <span class="number">0.865</span>], [<span class="number">1</span>, <span class="number">0.451</span>, <span class="number">1.186</span>], [<span class="number">1</span>, <span class="number">1.63</span>, <span class="number">1.123</span>], [<span class="number">1</span>, <span class="number">0.82</span>, <span class="number">0.848</span>], [<span class="number">1</span>, <span class="number">1.213</span>, <span class="number">1.48</span>], [<span class="number">1</span>, <span class="number">0.894</span>, <span class="number">0.664</span>], [<span class="number">1</span>, <span class="number">1.456</span>, <span class="number">0.934</span>], [<span class="number">1</span>, <span class="number">0.59</span>, <span class="number">1.525</span>], [<span class="number">1</span>, <span class="number">0.522</span>, <span class="number">1.329</span>], [<span class="number">1</span>, <span class="number">1.179</span>, <span class="number">1.396</span>], [<span class="number">1</span>, <span class="number">0.527</span>, <span class="number">0.273</span>], [<span class="number">1</span>, <span class="number">1.399</span>, <span class="number">1.215</span>], [<span class="number">1</span>, <span class="number">0.966</span>, <span class="number">1.514</span>], [<span class="number">1</span>, <span class="number">1.341</span>, <span class="number">0.028</span>], [<span class="number">1</span>, <span class="number">0.479</span>, <span class="number">0.191</span>], [<span class="number">1</span>, <span class="number">1.193</span>, <span class="number">0.724</span>], [<span class="number">1</span>, <span class="number">0.714</span>, <span class="number">1.285</span>]]</span><br><span class="line">g_Ty_arr=[[<span class="number">0</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">1</span>], [<span class="number">0</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">1</span>], [<span class="number">1</span>, <span class="number">0</span>], [<span class="number">1</span>, <span class="number">0</span>], [<span class="number">1</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">1</span>], [<span class="number">1</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">1</span>], [<span class="number">0</span>, <span class="number">0</span>], [<span class="number">1</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">1</span>], [<span class="number">0</span>, <span class="number">0</span>], [<span class="number">1</span>, <span class="number">0</span>], [<span class="number">1</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">1</span>], [<span class="number">0</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">0</span>], [<span class="number">1</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">0</span>], [<span class="number">1</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">1</span>], [<span class="number">0</span>, <span class="number">1</span>], [<span class="number">0</span>, <span class="number">1</span>], [<span class="number">1</span>, <span class="number">0</span>], [<span class="number">1</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">1</span>], [<span class="number">0</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">0</span>], [<span class="number">1</span>, <span class="number">0</span>], [<span class="number">1</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">1</span>], [<span class="number">0</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">1</span>], [<span class="number">1</span>, <span class="number">0</span>], [<span class="number">1</span>, <span class="number">0</span>], [<span class="number">1</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">0</span>], [<span class="number">1</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">1</span>], [<span class="number">0</span>, <span class="number">0</span>], [<span class="number">1</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">1</span>], [<span class="number">0</span>, <span class="number">1</span>], [<span class="number">0</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">0</span>], [<span class="number">1</span>, <span class="number">0</span>], [<span class="number">1</span>, <span class="number">0</span>], [<span class="number">1</span>, <span class="number">0</span>], [<span class="number">1</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">1</span>], [<span class="number">0</span>, <span class="number">1</span>], [<span class="number">0</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">1</span>], [<span class="number">0</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">0</span>], [<span class="number">1</span>, <span class="number">0</span>], [<span class="number">1</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">0</span>], [<span class="number">0</span>, <span class="number">0</span>]]</span><br><span class="line">g_y_arr=[<span class="number">2</span>, <span class="number">2</span>, <span class="number">1</span>, <span class="number">2</span>, <span class="number">1</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">1</span>, <span class="number">0</span>, <span class="number">2</span>, <span class="number">2</span>, <span class="number">2</span>, <span class="number">1</span>, <span class="number">2</span>, <span class="number">0</span>, <span class="number">2</span>, <span class="number">2</span>, <span class="number">2</span>, <span class="number">1</span>, <span class="number">2</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">1</span>, <span class="number">2</span>, <span class="number">2</span>, <span class="number">2</span>, <span class="number">0</span>, <span class="number">2</span>, <span class="number">2</span>, <span class="number">2</span>, <span class="number">2</span>, <span class="number">0</span>, <span class="number">2</span>, <span class="number">2</span>, <span class="number">2</span>, <span class="number">2</span>, <span class="number">1</span>, <span class="number">1</span>, <span class="number">1</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">1</span>, <span class="number">2</span>, <span class="number">2</span>, <span class="number">2</span>, <span class="number">2</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">2</span>, <span class="number">1</span>, <span class="number">2</span>, <span class="number">1</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">2</span>, <span class="number">2</span>, <span class="number">0</span>, <span class="number">2</span>, <span class="number">2</span>, <span class="number">1</span>, <span class="number">2</span>, <span class="number">0</span>, <span class="number">2</span>, <span class="number">1</span>, <span class="number">1</span>, <span class="number">2</span>, <span class="number">2</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">2</span>, <span class="number">2</span>, <span class="number">2</span>, <span class="number">2</span>, <span class="number">2</span>, <span class="number">2</span>, <span class="number">1</span>, <span class="number">1</span>, <span class="number">2</span>, <span class="number">2</span>, <span class="number">2</span>, <span class="number">2</span>, <span class="number">2</span>, <span class="number">2</span>, <span class="number">1</span>, <span class="number">2</span>, <span class="number">2</span>, <span class="number">2</span>, <span class="number">2</span>, <span class="number">2</span>, <span class="number">2</span>, <span class="number">2</span>, <span class="number">2</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">2</span>, <span class="number">2</span>]</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">phi</span>(<span class="params">i,theta,x</span>):</span><br><span class="line">	theta_n = <span class="built_in">len</span>(theta)</span><br><span class="line">	numerator = math.exp(np.dot(theta[i], x))</span><br><span class="line">	denominator = <span class="number">0</span>;</span><br><span class="line">	<span class="keyword">for</span> j <span class="keyword">in</span> <span class="built_in">range</span>(theta_n):                      <span class="comment"># maybe need to optimize</span></span><br><span class="line">		denominator = denominator + math.exp(np.dot(theta[j],x))</span><br><span class="line">	<span class="keyword">return</span> numerator/denominator</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">h_theta</span>(<span class="params">theta,x</span>):</span><br><span class="line">	theta_n = <span class="built_in">len</span>(theta)</span><br><span class="line">	ret = []</span><br><span class="line">	<span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(theta_n):</span><br><span class="line">		ret.append(phi(i,theta,x))</span><br><span class="line">	<span class="keyword">return</span> ret</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">one</span>(<span class="params">y,i</span>):</span><br><span class="line">	<span class="keyword">if</span> y == i:</span><br><span class="line">		<span class="keyword">return</span> <span class="number">1</span></span><br><span class="line">	<span class="keyword">else</span>:</span><br><span class="line">		<span class="keyword">return</span> <span class="number">0</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">derl</span>(<span class="params">f,x_arr,y_arr,theta</span>):</span><br><span class="line">	<span class="comment"># 0.</span></span><br><span class="line">	<span class="comment"># f is the dimension to calc the partial derivative</span></span><br><span class="line">	<span class="comment"># 1. calc the size</span></span><br><span class="line">	<span class="comment"># theta_n is the size of theta, equals to the length of Ty&#x27; result set -1 .Here, equals lenght of &#123;0,1,2&#125; = 3-1 =2</span></span><br><span class="line">	<span class="comment"># m is the sum of samples</span></span><br><span class="line">	<span class="comment"># x_n is the dimension of the input variable &#x27;x&#x27; + 1 (for x_0 =1). Here is 2 + 1 = 3</span></span><br><span class="line">	theta_n = <span class="built_in">len</span>(theta)</span><br><span class="line">	m = <span class="built_in">len</span>(x_arr)</span><br><span class="line">	x_n = <span class="built_in">len</span>(x_arr[<span class="number">0</span>])</span><br><span class="line">	<span class="comment"># initial the output variable sum.Here is a vector, and the length of this vector is x_n</span></span><br><span class="line">	<span class="built_in">sum</span> = []</span><br><span class="line">	<span class="keyword">for</span> x_dim_index <span class="keyword">in</span> <span class="built_in">range</span>(x_n):</span><br><span class="line">			<span class="built_in">sum</span>.append(<span class="number">0</span>)</span><br><span class="line">	<span class="comment"># 2. calc the partial derivative</span></span><br><span class="line">	<span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(x_n):</span><br><span class="line">		<span class="built_in">sum</span>[i] = <span class="number">0</span></span><br><span class="line">		<span class="keyword">for</span> j <span class="keyword">in</span> <span class="built_in">range</span>(m):</span><br><span class="line">			<span class="built_in">sum</span>[i]=<span class="built_in">sum</span>[i]+(one(y_arr[j],f)-phi(f,theta,x_arr[j]))*x_arr[j][i]</span><br><span class="line">		<span class="built_in">sum</span>[i]=<span class="built_in">sum</span>[i]/m</span><br><span class="line">	<span class="comment">#sum=plus_vector(sum,theta[f],0.1)</span></span><br><span class="line">	<span class="keyword">return</span> <span class="built_in">sum</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">plus_vector</span>(<span class="params">arr1,arr2,a</span>):</span><br><span class="line">	<span class="keyword">return</span> [x + a * y <span class="keyword">for</span> x, y <span class="keyword">in</span> <span class="built_in">zip</span>(arr1, arr2)]</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">update</span>(<span class="params">theta,a,x_arr,y_arr</span>):</span><br><span class="line">	theta_n = <span class="built_in">len</span>(theta)</span><br><span class="line">	<span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(theta_n):</span><br><span class="line">		theta[i]=plus_vector(theta[i],derl(i, x_arr,y_arr,theta),a)</span><br><span class="line">	<span class="keyword">return</span> theta</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">judge1</span>(<span class="params">theta,x_arr,y_arr_vector,limit,debug</span>):</span><br><span class="line">	j_theta = J(theta,x_arr,y_arr_vector)</span><br><span class="line">	<span class="keyword">if</span> j_theta &lt; limit:</span><br><span class="line">		<span class="keyword">return</span> <span class="literal">True</span></span><br><span class="line">	<span class="keyword">if</span> debug:</span><br><span class="line">		<span class="built_in">print</span>(<span class="string">&quot;|J_theta(x)| = &quot;</span>, j_theta,<span class="string">&quot;\n&quot;</span>)</span><br><span class="line">	<span class="keyword">return</span> <span class="literal">False</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">J</span>(<span class="params">theta,x_arr,y_arr_vector</span>):</span><br><span class="line">	<span class="built_in">sum</span>=<span class="number">0</span></span><br><span class="line">	m = <span class="built_in">len</span>(x_arr)</span><br><span class="line">	y_len = <span class="built_in">len</span>(y_arr_vector[<span class="number">0</span>])</span><br><span class="line">	<span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(m):</span><br><span class="line">		<span class="keyword">for</span> j <span class="keyword">in</span> <span class="built_in">range</span>(y_len):</span><br><span class="line">			<span class="built_in">sum</span> = <span class="built_in">sum</span> + (phi(j,theta,x_arr[i]) - y_arr_vector[i][j])**<span class="number">2</span></span><br><span class="line">	<span class="keyword">return</span> <span class="built_in">sum</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">calTheVaule</span>():</span><br><span class="line">	<span class="comment">#theta=[[theta_1_1,theta_1_2],[theta_2_1,theta_2_2],[theta_3_1,theta_3_2]]</span></span><br><span class="line">	theta = [[<span class="number">1</span>,<span class="number">1</span>,<span class="number">1</span>],[<span class="number">1</span>,<span class="number">1</span>,<span class="number">1</span>],[<span class="number">1</span>,<span class="number">1</span>,<span class="number">1</span>]]</span><br><span class="line">	a = <span class="number">1</span></span><br><span class="line">	count = <span class="number">0</span></span><br><span class="line">	<span class="keyword">while</span> <span class="number">1</span>:</span><br><span class="line">		<span class="keyword">if</span> judge1(theta,g_x_arr,g_Ty_arr,<span class="number">1</span>,<span class="literal">True</span>):</span><br><span class="line">			<span class="keyword">break</span></span><br><span class="line">		theta=update(theta,a,g_x_arr,g_y_arr)</span><br><span class="line">		count = count + <span class="number">1</span></span><br><span class="line">		<span class="built_in">print</span>(<span class="string">&quot;count=&quot;</span>,count,<span class="string">&quot;theta=&quot;</span>,theta)</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">calcIndex</span>(<span class="params">theta,x</span>):</span><br><span class="line">  phi0 = phi(<span class="number">0</span>,theta,x)</span><br><span class="line">  phi1 = phi(<span class="number">1</span>,theta,x)</span><br><span class="line">  phi2 = phi(<span class="number">2</span>,theta,x)</span><br><span class="line">  <span class="keyword">if</span> phi0 &gt;= phi1 <span class="keyword">and</span> phi0 &gt;=phi1:</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span></span><br><span class="line">  <span class="keyword">elif</span> phi1&gt;= phi0 <span class="keyword">and</span> phi1 &gt;= phi2:</span><br><span class="line">    <span class="keyword">return</span> <span class="number">1</span></span><br><span class="line">  <span class="keyword">else</span>:</span><br><span class="line">    <span class="keyword">return</span> <span class="number">2</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">testValue</span>():</span><br><span class="line">  <span class="comment"># limit =1， count = 33844</span></span><br><span class="line">  theta = [[<span class="number">17.418683742474045</span>, <span class="number">13.989348587756815</span>, -<span class="number">37.731307869980014</span>],[-<span class="number">33.56035031194091</span>, <span class="number">1.3797244978249763</span>, <span class="number">34.095843086377855</span>],[<span class="number">19.97548491920147</span>, -<span class="number">11.65484983882828</span>, <span class="number">7.628008093823735</span>]]</span><br><span class="line">  samples = <span class="number">100</span></span><br><span class="line">  figure, ax = plt.subplots()</span><br><span class="line">  <span class="comment"># 设置x，y值域</span></span><br><span class="line">  ax.set_xlim(left=<span class="number">0</span>, right=<span class="number">2</span>)</span><br><span class="line">  ax.set_ylim(bottom=<span class="number">0</span>, top=<span class="number">2</span>)</span><br><span class="line">  <span class="comment"># 两条line的数据</span></span><br><span class="line">  (line1_xs, line1_ys) = [(<span class="number">0</span>, <span class="number">2</span>), (<span class="number">0</span>, <span class="number">1</span>)]</span><br><span class="line">  (line2_xs, line2_ys) = [(<span class="number">0</span>, <span class="number">2</span>), (<span class="number">2</span>, <span class="number">1</span>)]</span><br><span class="line">  <span class="comment"># 创建两条线，并添加</span></span><br><span class="line">  ax.add_line(Line2D(line1_xs, line1_ys, linewidth=<span class="number">1</span>, color=<span class="string">&#x27;blue&#x27;</span>))</span><br><span class="line">  ax.add_line(Line2D(line2_xs, line2_ys, linewidth=<span class="number">1</span>, color=<span class="string">&#x27;blue&#x27;</span>))</span><br><span class="line">  <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(samples):</span><br><span class="line">    x_0 = random.randint(<span class="number">0</span>,<span class="number">2000</span>)/<span class="number">1000</span></span><br><span class="line">    x_1 = random.randint(<span class="number">0</span>,<span class="number">2000</span>)/<span class="number">1000</span></span><br><span class="line">    index = calcIndex(theta,[<span class="number">1</span>,x_0,x_1])</span><br><span class="line">    <span class="keyword">if</span> index == <span class="number">0</span>:</span><br><span class="line">      plt.plot(x_0, x_1, <span class="string">&#x27;b--&#x27;</span>, marker=<span class="string">&#x27;x&#x27;</span>, color=<span class="string">&#x27;r&#x27;</span>)</span><br><span class="line">    <span class="keyword">elif</span> index == <span class="number">1</span>:</span><br><span class="line">      plt.plot(x_0, x_1, <span class="string">&#x27;b--&#x27;</span>, marker=<span class="string">&#x27;+&#x27;</span>, color=<span class="string">&#x27;g&#x27;</span>)</span><br><span class="line">    <span class="keyword">else</span>:</span><br><span class="line">      plt.plot(x_0, x_1, <span class="string">&#x27;b--&#x27;</span>, marker=<span class="string">&#x27;o&#x27;</span>, color=<span class="string">&#x27;b&#x27;</span>)</span><br><span class="line">  plt.xlabel(<span class="string">&quot;x1&quot;</span>)</span><br><span class="line">  plt.ylabel(<span class="string">&quot;x2&quot;</span>)</span><br><span class="line">  plt.plot()</span><br><span class="line">  plt.show()</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> __name__== <span class="string">&quot;__main__&quot;</span>:</span><br><span class="line">  <span class="comment">#calTheVaule()</span></span><br><span class="line">  testValue()</span><br></pre></td></tr></table></figure>
-
-<p>经过33844次迭代之后，我们得到\(\theta\) &#x3D; [[17.418683742474045, 13.989348587756815, -37.731307869980014],[-33.56035031194091, 1.3797244978249763, 34.095843086377855],[19.97548491920147, -11.65484983882828, 7.628008093823735]]</p>
-<blockquote>
-<p>迭代的次数越多数据会越准确，这里迭代了上三万次，实际上可以通过牛顿法来减少迭代的次数，这里就不再重新代码了，牛顿法可以参见前面的文章。</p>
-</blockquote>
-<p>然后，我们随机制造一组值，看看分类效果，具体如下：</p>
-<img src="/images/机器学习/监督学习-softmax计算结果.png" width=50% height=50% text-align=center/>
-
-<h2 id="附录-公式推导手写版"><a href="#附录-公式推导手写版" class="headerlink" title="附录 公式推导手写版"></a>附录 公式推导手写版</h2><img src="/images/机器学习/监督学习-softmax公式推导手写版1.png" width=50% height=50% text-align=center/>
-
-<img src="/images/机器学习/监督学习-softmax公式推导手写版2.png" width=50% height=50% text-align=center/>
-
-<img src="/images/机器学习/监督学习-softmax公式推导手写版3.png" width=50% height=50% text-align=center/>
-
-      
-    </div>
-    <footer class="article-footer">
-      <a data-url="http://example.com/2017/07/24/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-2-4-%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0%E4%B9%8Bsoftmax/" data-id="cuids32TPa6dyuYWjumOTxCJ9" data-title="机器学习-2.4-监督学习之softmax" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      <a data-url="http://example.com/2017/08/05/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-2-5-%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0%E4%B9%8B%E7%94%9F%E6%88%90%E5%9E%8B%E5%AD%A6%E4%B9%A0%E7%AE%97%E6%B3%95/" data-id="cuidgl67e4K-2G67EGlMS4cnO" data-title="机器学习-2.5-监督学习之生成型学习算法" class="article-share-link"><span class="fa fa-share">Share</span></a>
       
       
       
@@ -1951,7 +1928,7 @@ $$\frac{\partial l(\theta )}{\partial {\theta _f}} = \sum\limits _{i = 1}^m {\ln
   <div class="widget-wrap">
     <h3 class="widget-title">Tags</h3>
     <div class="widget">
-      <ul class="tag-list" itemprop="keywords"><li class="tag-list-item"><a class="tag-list-link" href="/tags/EC/" rel="tag">EC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/RSS/" rel="tag">RSS</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/" rel="tag">机器学习</a></li></ul>
+      <ul class="tag-list" itemprop="keywords"><li class="tag-list-item"><a class="tag-list-link" href="/tags/EC/" rel="tag">EC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/RSS/" rel="tag">RSS</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/train/" rel="tag">train</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/" rel="tag">机器学习</a></li></ul>
     </div>
   </div>
 
@@ -1961,7 +1938,7 @@ $$\frac{\partial l(\theta )}{\partial {\theta _f}} = \sum\limits _{i = 1}^m {\ln
   <div class="widget-wrap">
     <h3 class="widget-title">Tag Cloud</h3>
     <div class="widget tagcloud">
-      <a href="/tags/EC/" style="font-size: 10px;">EC</a> <a href="/tags/RSS/" style="font-size: 15px;">RSS</a> <a href="/tags/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/" style="font-size: 20px;">机器学习</a>
+      <a href="/tags/EC/" style="font-size: 10px;">EC</a> <a href="/tags/RSS/" style="font-size: 15px;">RSS</a> <a href="/tags/train/" style="font-size: 10px;">train</a> <a href="/tags/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/" style="font-size: 20px;">机器学习</a>
     </div>
   </div>
 
@@ -1970,7 +1947,7 @@ $$\frac{\partial l(\theta )}{\partial {\theta _f}} = \sum\limits _{i = 1}^m {\ln
   <div class="widget-wrap">
     <h3 class="widget-title">Archives</h3>
     <div class="widget">
-      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2025/02/">February 2025</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2023/12/">December 2023</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/10/">October 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">September 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/08/">August 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/07/">July 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/06/">June 2017</a></li></ul>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2026/04/">April 2026</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2025/02/">February 2025</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2023/12/">December 2023</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/10/">October 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">September 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/08/">August 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/07/">July 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/06/">June 2017</a></li></ul>
     </div>
   </div>
 
@@ -1983,6 +1960,10 @@ $$\frac{\partial l(\theta )}{\partial {\theta _f}} = \sum\limits _{i = 1}^m {\ln
       <ul>
         
           <li>
+            <a href="/2026/04/14/%E5%BC%B9%E6%80%A7%E8%AE%AD%E7%BB%83/">弹性训练</a>
+          </li>
+        
+          <li>
             <a href="/2025/02/07/ErasuceCode%E7%AE%97%E6%B3%95%E6%8F%AD%E7%A7%98/">ErasuceCode算法揭秘</a>
           </li>
         
@@ -1991,15 +1972,11 @@ $$\frac{\partial l(\theta )}{\partial {\theta _f}} = \sum\limits _{i = 1}^m {\ln
           </li>
         
           <li>
-            <a href="/2023/12/25/RSS-%E8%BF%9C%E7%A8%8BMerge%E7%9A%84%E8%AE%BE%E8%AE%A1EN/">RSS-Remote Merge Design</a>
-          </li>
-        
-          <li>
             <a href="/2023/12/25/RSS-%E8%BF%9C%E7%A8%8BMerge%E7%9A%84%E8%AE%BE%E8%AE%A1/">RSS-远程Merge的设计</a>
           </li>
         
           <li>
-            <a href="/2017/10/22/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-3-2-%E9%9D%9E%E7%9B%91%E7%9D%A3%E5%AD%A6%E4%B9%A0%E4%B9%8B%E4%B8%BB%E6%88%90%E5%88%86%E5%88%86%E6%9E%90/">机器学习-3.2-非监督学习之主成分分析.md</a>
+            <a href="/2023/12/25/RSS-%E8%BF%9C%E7%A8%8BMerge%E7%9A%84%E8%AE%BE%E8%AE%A1EN/">RSS-Remote Merge Design</a>
           </li>
         
       </ul>
@@ -2015,7 +1992,7 @@ $$\frac{\partial l(\theta )}{\partial {\theta _f}} = \sum\limits _{i = 1}^m {\ln
   <div class="outer">
     <div id="footer-info" class="inner">
       
-      &copy; 2025 zhengchenyu<br>
+      &copy; 2026 zhengchenyu<br>
       Powered by <a href="https://hexo.io/" target="_blank">Hexo</a>
     </div>
   </div>
